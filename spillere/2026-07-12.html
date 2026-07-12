@@ -136,6 +136,7 @@
     body { padding: 10px; }
     .player-card, .text-display { padding: 14px; }
     .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+    .player-card { position: relative; top: 0; }
   }
 </style>
 </head>
@@ -158,7 +159,7 @@
   <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
 </div>
 
-<div class="text-display" id="text-display"></div>
+<div class="text-display" id="text-display"><p style="color:#888;font-size:0.85rem;">Laster tekst ...</p></div>
 
 <script>
 // ============ CONFIG (replaced by generator) ============
@@ -503,7 +504,15 @@ let currentCueIdx = -1;
 // --- Parse VTT (embedded data) ---
 function loadVTT() {
   cues = parseVTT(VTT_DATA);
+  console.log('VTT cues loaded:', cues.length);
   buildCueElements();
+  // Show first cue as indicator
+  if (cues.length > 0) {
+    const info = document.createElement('div');
+    info.style.cssText = 'font-size:0.75rem;color:#aaa;margin-bottom:8px;padding:0 14px;';
+    info.textContent = cues.length + ' avsnitt lastet';
+    textDisplay.insertBefore(info, textDisplay.firstChild);
+  }
 }
 
 function parseVTT(raw) {
@@ -578,7 +587,8 @@ function updateActiveCue() {
       el.classList.remove('past');
       el.classList.add('active');
       // Scroll into view smoothly
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Scroll into view (commented: causes issues in WeChat browser)
+      // el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }
 }
