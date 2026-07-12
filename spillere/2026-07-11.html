@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="auto"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-07-11.mp3';
+const TITLE = 'Dagens nyheter – 11. juli 2026';
+const DATE_STR = '2026-07-11';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:03,120 --> 00:00:07,680
+USAs president Donald Trump har kommet med en svært alvorlig trussel mot Iran.
+
+2
+00:00:08,520 --> 00:00:19,480
+Natt til lørdag 11. juli skrev Trump på sitt eget sosiale medium Truth Social at det amerikanske militæret har 1000 missiler klare, rettet mot Iran.
+
+3
+00:00:20,300 --> 00:00:33,500
+Bakgrunnen for trusselen er påstander om at Iran planlegger å ta livet av presidenten. Trump skrev at missilene er "ferdigladet" og at "tusenvis flere vil følge umiddelbart" dersom Iran forsøker å drepe ham.
+
+4
+00:00:34,400 --> 00:00:40,840
+Dette er en av de sterkeste truslene en amerikansk president har kommet med mot et annet land på mange år.
+
+5
+00:00:42,020 --> 00:00:48,960
+Uttalelsen kommer som en direkte reaksjon på rapporter i amerikanske medier om at Israel har delt etterretning med USA.
+
+6
+00:00:50,320 --> 00:00:56,180
+Ifølge disse rapportene skal Iran ha en ny og konkret plan om å ta livet av president Trump.
+
+7
+00:00:57,040 --> 00:01:00,720
+Forholdet mellom USA og Iran har vært spent i mange år.
+
+8
+00:01:01,540 --> 00:01:08,260
+De to landene har ikke hatt diplomatiske forbindelser siden 1980, etter den iranske revolusjonen.
+
+9
+00:01:09,140 --> 00:01:19,300
+I nyere tid har konflikten handlet om Irans atomprogram, støtte til militante grupper i Midtøsten, og angrep på amerikanske baser i regionen.
+
+10
+00:01:19,980 --> 00:01:27,260
+Trump har tidligere vært hard i retorikken mot Iran, men denne gangen er trusselen mer direkte og konkret enn før.
+
+11
+00:01:28,400 --> 00:01:31,900
+Situasjonen har skapt stor uro i det internasjonale samfunnet.
+
+12
+00:01:32,980 --> 00:01:41,940
+Mange land og organisasjoner er bekymret for at en militær konflikt mellom USA og Iran kan få alvorlige konsekvenser for hele Midtøsten-regionen.
+
+13
+00:01:42,980 --> 00:01:51,560
+Eksperter peker på at et angrep kan føre til høyere oljepriser, flyktningstrømmer og mer ustabilitet i en region som allerede har mange konflikter.
+
+14
+00:01:52,500 --> 00:01:58,320
+For Norges del kan en slik konflikt påvirke både oljeøkonomien og den internasjonale sikkerhetssituasjonen.
+
+15
+00:01:59,040 --> 00:02:02,840
+Iran har foreløpig ikke svart offentlig på Trumps uttalelser.
+
+16
+00:02:03,560 --> 00:02:17,420
+Iranske myndigheter har tidligere avvist lignende påstander om drapsplaner mot amerikanske ledere. Analytikere sier at situasjonen er svært alvorlig, men at det fortsatt er mulig å unngå en militær konfrontasjon.
+
+17
+00:02:18,200 --> 00:02:24,220
+Diplomati og dialog blir trukket fram som den beste veien videre av flere verdensledere.
+
+18
+00:02:25,660 --> 00:02:32,220
+Folkerettseksperter minner om at et militært angrep uten FN-godkjenning kan være i strid med internasjonal lov.
+
+19
+00:02:33,380 --> 00:02:37,120
+Nyheten kommer i en tid da verden allerede står overfor flere store kriser.
+
+20
+00:02:38,360 --> 00:02:51,740
+Krigen i Ukraina fortsetter med full styrke, og natt til lørdag ble flere mennesker såret i et nytt russisk rakettangrep mot Kyiv. I Venezuela har et kraftig jordskjelv tatt livet av over 4000 mennesker.
+
+21
+00:02:52,840 --> 00:03:00,460
+Mange land er bekymret for at en ny konflikt mellom USA og Iran vil gjøre det enda vanskeligere å håndtere disse krisene.
+
+22
+00:03:02,400 --> 00:03:08,180
+FNs generalsekretær har tidligere bedt alle parter om å vise tilbakeholdenhet og søke fredelige løsninger.
+
+23
+00:03:08,820 --> 00:03:19,580
+Det er foreløpig uklart om USA faktisk vil gjennomføre et angrep, eller om Trumps uttalelser først og fremst er ment som en advarsel og et politisk signal.
+
+24
+00:03:20,920 --> 00:03:25,680
+Langs norskekysten står en viktig del av vår kulturarv i fare for å forsvinne for alltid.
+
+25
+00:03:27,080 --> 00:03:31,140
+NRK Vestland melder at stadig flere naust og sjøhus forfaller og blir borte.
+
+26
+00:03:32,000 --> 00:03:37,580
+Dette er bygninger som har vært en sentral del av norsk kystkultur i hundrevis av år.
+
+27
+00:03:38,400 --> 00:03:46,480
+Naustene ble brukt til å oppbevare båter og fiskeredskaper, mens sjøhusene har vært brukt til alt fra handel til bolig.
+
+28
+00:03:47,220 --> 00:03:53,100
+Problemet er særlig alvorlig i Vestland fylke, der mange av de gamle trebygningene står uten vedlikehold.
+
+29
+00:03:54,320 --> 00:03:57,540
+Eierne av bygningene har ofte ikke råd til å ta vare på dem.
+
+30
+00:03:58,720 --> 00:04:01,680
+Å vedlikeholde et gammelt trehus ved sjøen er svært dyrt.
+
+31
+00:04:02,300 --> 00:04:07,320
+Bygningene utsettes for hardt vær, saltvann og sterk vind store deler av året.
+
+32
+00:04:07,980 --> 00:04:14,400
+Mange eiere er pensjonister eller arvinger som ikke har penger eller krefter til å gjøre det nødvendige vedlikeholdet.
+
+33
+00:04:14,960 --> 00:04:18,840
+Kulturminneeksperter sier at dette er et nasjonalt problem.
+
+34
+00:04:19,820 --> 00:04:23,860
+Naust og sjøhus forteller historien om Norge som kystnasjon.
+
+35
+00:04:24,560 --> 00:04:29,040
+De viser hvordan folk levde av fiske, handel og sjøfart gjennom generasjoner.
+
+36
+00:04:29,860 --> 00:04:40,680
+Hver bygning har sin egen historie, sin egen arkitektur og sin egen plass i landskapet. Når de forsvinner, mister vi en viktig del av vår felles identitet og historie.
+
+37
+00:04:41,360 --> 00:04:45,120
+Ekspertene mener at det haster med å finne løsninger før det er for sent.
+
+38
+00:04:46,100 --> 00:04:52,420
+Regjeringen har noen støtteordninger for å bevare kulturminner, men mange mener at støtten ikke er stor nok.
+
+39
+00:04:53,240 --> 00:05:01,800
+Lokale ildsjeler og frivillige organisasjoner gjør en stor innsats for å redde bygningene, men de kan ikke redde alt alene.
+
+40
+00:05:02,860 --> 00:05:13,380
+Flere kommuner etterlyser nå mer hjelp fra staten. De ønsker også enklere regler for hva eierne kan bruke bygningene til, slik at det blir mer attraktivt å ta vare på dem.
+
+41
+00:05:14,420 --> 00:05:21,500
+Noen foreslår at naust kan brukes til overnatting for turister, eller at sjøhus kan gjøres om til kulturhus og møteplasser.
+
+42
+00:05:23,100 --> 00:05:25,620
+Klimaendringene gjør situasjonen enda vanskeligere.
+
+43
+00:05:26,280 --> 00:05:32,120
+Hyppigere stormer, mer nedbør og høyere havnivå øker farten på forfallet.
+
+44
+00:05:32,900 --> 00:05:38,500
+Bygninger som har stått i over 200 år, kan bli ødelagt i løpet av få år hvis ingenting blir gjort.
+
+45
+00:05:39,180 --> 00:05:44,940
+Dette gjelder ikke bare i Norge – mange kystland i Europa opplever det samme problemet.
+
+46
+00:05:45,660 --> 00:05:51,240
+Forskere sier at vi må handle raskt hvis vi vil redde denne kulturarven for fremtidige generasjoner.
+
+47
+00:05:51,840 --> 00:05:55,240
+For turistnæringen i Vestland er dette også en viktig sak.
+
+48
+00:05:56,060 --> 00:06:06,820
+De gamle sjøhusene og naustene er en stor attraksjon for besøkende fra hele verden. Mange turister kommer til Bergen og Vestlandet nettopp for å oppleve den unike kystkulturen.
+
+49
+00:06:07,340 --> 00:06:13,840
+Bryggen i Bergen, som står på UNESCOs verdensarvliste, er det mest kjente eksempelet på denne byggeskikken.
+
+50
+00:06:14,900 --> 00:06:20,980
+Men utenfor bysentrum finnes det hundrevis av mindre kjente bygninger som også har stor historisk verdi.
+
+51
+00:06:21,740 --> 00:06:29,360
+Når disse forsvinner, mister vi ikke bare historien – vi mister også en viktig del av det som gjør Norge til et attraktivt reisemål.
+
+52
+00:06:30,680 --> 00:06:37,360
+Flere reiselivsaktører har derfor sluttet seg til kravet om mer statlig støtte til bevaring av kystkulturarven.
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  buildCueElements();
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>

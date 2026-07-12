@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="auto"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-07-09.mp3';
+const TITLE = 'Dagens nyheter – 9. juli 2026';
+const DATE_STR = '2026-07-09';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:03,760 --> 00:00:07,460
+Norge spiller kvartfinale i fotball-VM for første gang på 28 år.
+
+2
+00:00:08,520 --> 00:00:11,540
+Sist gang Norge var i en VM-kvartfinale var i 1998.
+
+3
+00:00:13,140 --> 00:00:18,040
+I kveld klokken 22.00 norsk tid møter det norske laget England.
+
+4
+00:00:19,440 --> 00:00:24,540
+Kampen vises på NRK, og millioner av nordmenn kommer til å følge med foran TV-skjermene.
+
+5
+00:00:25,380 --> 00:00:29,660
+Dette er uten tvil en av de største fotballkampene i norsk historie.
+
+6
+00:00:30,300 --> 00:00:33,780
+Hele nasjonen kommer til å stoppe opp for å se denne kampen.
+
+7
+00:00:34,500 --> 00:00:37,780
+Veien til kvartfinalen har vært spennende for det norske laget.
+
+8
+00:00:38,380 --> 00:00:43,080
+I gruppespillet vant Norge mot Irak og Senegal, men tapte mot Frankrike.
+
+9
+00:00:43,980 --> 00:00:47,840
+I åttedelsfinalen møtte Norge Elfenbenskysten og vant 2-1.
+
+10
+00:00:48,640 --> 00:00:53,220
+Så kom den store overraskelsen: I kvartfinalen slo Norge Brasil 2-1.
+
+11
+00:00:54,160 --> 00:00:56,420
+Erling Braut Haaland scoret begge målene for Norge.
+
+12
+00:00:57,140 --> 00:01:04,080
+Dette var en sensasjonell prestasjon, for Brasil er et av verdens beste fotballag og har vunnet VM fem ganger.
+
+13
+00:01:04,900 --> 00:01:06,940
+Kampen mot England blir en tøff utfordring.
+
+14
+00:01:07,500 --> 00:01:10,200
+England er et sterkt lag med mange gode spillere.
+
+15
+00:01:11,040 --> 00:01:15,800
+De slo Kroatia 4-2 i gruppespillet og har vist god form gjennom hele turneringen.
+
+16
+00:01:16,400 --> 00:01:19,860
+Men det norske laget har også vist at de kan slå store nasjoner.
+
+17
+00:01:20,900 --> 00:01:24,700
+Etter seieren mot Brasil er selvtilliten høy i den norske troppen.
+
+18
+00:01:25,720 --> 00:01:30,500
+Landslagstreneren har sagt at laget går inn i kampen uten frykt, og at de tror på seier.
+
+19
+00:01:31,220 --> 00:01:33,280
+I Bergen er stemningen helt elektrisk.
+
+20
+00:01:34,000 --> 00:01:38,120
+Bergen kommune inviterer til gratis visning av kampen i Nygårdsparken.
+
+21
+00:01:38,860 --> 00:01:42,700
+Det blir satt opp storskjermer slik at alle kan se kampen sammen utendørs.
+
+22
+00:01:43,380 --> 00:01:47,100
+Dette er en folkefest som samler bergensere i alle aldre.
+
+23
+00:01:47,740 --> 00:01:53,480
+Også i andre byer som Oslo og Trondheim er det planlagt store folkefester med storskjermer.
+
+24
+00:01:54,160 --> 00:01:57,120
+Interessen for landslaget har vært enorm de siste dagene.
+
+25
+00:01:57,900 --> 00:02:10,940
+Utenfor sportsbutikker i Oslo har køen vært flere hundre meter lang for å sikre seg en norsk landslagsdrakt. Også politiet i Bergen har fått meldinger om personer som selger kopier av landslagsdraktene i Loddefjord.
+
+26
+00:02:11,780 --> 00:02:16,520
+Politiet i Bergen forbereder seg samtidig på en stor feiring dersom Norge vinner.
+
+27
+00:02:17,960 --> 00:02:29,260
+Torgallmenningen i Bergen sentrum er et populært sted for spontane feiringer, og politiet har allerede varslet at de vil være til stede for å passe på at feiringen blir trygg og rolig.
+
+28
+00:02:30,040 --> 00:02:34,700
+Flere gater i sentrum kan bli stengt for biltrafikk for å gi plass til folkemengden.
+
+29
+00:02:35,200 --> 00:02:53,840
+Det forventes at tusenvis av mennesker vil strømme til sentrum hvis Norge går videre til semifinalen. Uansett resultat blir dette en historisk kveld for norsk fotball, og mange vil huske denne dagen resten av livet. Tunnelentreprenøren AG Tunnel i Sogndal har gått konkurs.
+
+30
+00:02:54,580 --> 00:02:58,120
+Selskapet hadde omtrent 80 ansatte, og alle mister nå jobben.
+
+31
+00:02:59,140 --> 00:03:05,180
+Dette er en tung dag for de ansatte og for lokalsamfunnet i Sogndal, som ligger i Vestland fylke.
+
+32
+00:03:06,520 --> 00:03:16,100
+AG Tunnel hadde spesialisert seg på tunnelrehabilitering, vann- og frostsikring, og selskapet har vært en viktig arbeidsgiver i regionen i mange år.
+
+33
+00:03:17,160 --> 00:03:20,440
+Problemene for AG Tunnel startet for flere måneder siden.
+
+34
+00:03:21,140 --> 00:03:25,780
+I midten av juni meldte selskapet at de skulle gjennomføre en rekonstruksjon.
+
+35
+00:03:26,250 --> 00:03:31,480
+En rekonstruksjon betyr at et selskap prøver å ordne opp i økonomien sin uten å gå konkurs.
+
+36
+00:03:32,300 --> 00:03:42,620
+Dessverre klarte ikke AG Tunnel dette. Daglig leder Frode Johan Bjørdal sier at målet hele tiden var å redde selskapet, men at de ikke fikk det til.
+
+37
+00:03:43,620 --> 00:03:47,060
+Han beskriver situasjonen som utrolig trist for alle involverte.
+
+38
+00:03:48,020 --> 00:03:57,100
+En viktig årsak til konkursen er en konflikt med en annen entreprenør, Bertelsen og Garpestad, som også gikk konkurs tidligere.
+
+39
+00:03:58,080 --> 00:04:04,060
+De to selskapene jobbet sammen med oppgradering av to tunneler på E134 over Haukelifjell.
+
+40
+00:04:04,860 --> 00:04:08,700
+Haukelifjell er en viktig fjellovergang mellom Østlandet og Vestlandet.
+
+41
+00:04:09,440 --> 00:04:12,900
+Det oppsto en tvist mellom selskapene, og saken endte i retten.
+
+42
+00:04:13,880 --> 00:04:19,740
+AG Tunnel vant rettssaken og skulle få rundt 30 millioner kroner i erstatning fra Bertelsen og Garpestad.
+
+43
+00:04:20,580 --> 00:04:26,380
+Problemet var at Bertelsen og Garpestad selv hadde gått konkurs før erstatningen ble utbetalt.
+
+44
+00:04:27,460 --> 00:04:35,500
+Derfor fikk AG Tunnel aldri pengene de hadde krav på. Uten disse 30 millionene klarte ikke AG Tunnel å fortsette driften.
+
+45
+00:04:36,280 --> 00:04:50,820
+Styreleder Frode Michal Nilsen sier at dette var «spikeren i kista» for AG Tunnel. Uten erstatningspengene var det rett og slett ikke mulig å redde selskapet. Konkursen får store konsekvenser for lokalsamfunnet i Sogndal.
+
+46
+00:04:51,860 --> 00:04:55,680
+80 arbeidsplasser forsvinner, og mange familier blir direkte berørt.
+
+47
+00:04:57,240 --> 00:05:03,640
+Sogndal er en mellomstor kommune med rundt 8000 innbyggere, så tapet av en så stor arbeidsgiver merkes godt.
+
+48
+00:05:04,540 --> 00:05:09,040
+De ansatte må nå finne nye jobber, og noen må kanskje flytte for å få arbeid.
+
+49
+00:05:10,160 --> 00:05:19,640
+Også arbeidet med tunnelene på E134 kan bli forsinket, fordi Statens vegvesen nå må finne nye entreprenører til å overta oppdragene.
+
+50
+00:05:20,520 --> 00:05:25,920
+Dette er en påminnelse om hvor sårbart næringslivet kan være, spesielt i mindre kommuner.
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  buildCueElements();
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>

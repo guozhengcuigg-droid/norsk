@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="auto"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-07-10.mp3';
+const TITLE = 'Dagens nyheter – 10. juli 2026';
+const DATE_STR = '2026-07-10';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:04,040 --> 00:00:07,720
+Møbelgiganten Ikea har blitt utsatt for et stort datainnbrudd.
+
+2
+00:00:08,940 --> 00:00:13,960
+Rundt 45.000 personopplysninger om kunder og ansatte i Norge er kommet på avveie.
+
+3
+00:00:14,700 --> 00:00:24,000
+Informasjonen om angrepet ble først kjent fredag 10. juli, etter at nyhetsbyrået NTB fikk innsyn i Ikeas avviksmelding til Datatilsynet.
+
+4
+00:00:24,620 --> 00:00:32,320
+Dette er en alvorlig sak som berører mange nordmenn, og Datatilsynet vil nå vurdere om Ikea har fulgt regelverket for personvern.
+
+5
+00:00:33,360 --> 00:00:41,580
+Selve datainnbruddet skjedde allerede 19. mars i år, men det tok altså nesten fire måneder før offentligheten fikk vite om saken.
+
+6
+00:00:42,680 --> 00:00:48,000
+Ifølge avviksmeldingen var angrepet en del av et større dataangrep mot Ikea internasjonalt.
+
+7
+00:00:48,680 --> 00:01:03,180
+Hackere utnyttet en sårbarhet i et dataprogram som var utviklet av en annen leverandør, og som ble brukt av Ikea IT AB. Dette viser hvor sårbare store selskaper kan være når de bruker programvare fra tredjeparter.
+
+8
+00:01:04,440 --> 00:01:09,820
+En sikkerhetsekspert NRK har snakket med, sier at slike angrep blir stadig vanligere.
+
+9
+00:01:10,460 --> 00:01:12,120
+Hvor mange er egentlig berørt?
+
+10
+00:01:12,720 --> 00:01:20,400
+Ifølge avviksmeldingen stjal hackerne data om opptil 3.261 ansatte og 42.370 kunder hos Ikea i Norge.
+
+11
+00:01:21,220 --> 00:01:31,620
+Men det reelle tallet er trolig noe lavere, fordi det kan være duplikater i tallene – det vil si at enkelte personer kan være registrert flere ganger i systemet.
+
+12
+00:01:32,420 --> 00:01:35,060
+Likevel er dette et betydelig antall mennesker.
+
+13
+00:01:35,900 --> 00:01:41,500
+De berørte vil bli kontaktet av Ikea dersom deres personopplysninger er blant de som er stjålet.
+
+14
+00:01:42,480 --> 00:01:59,360
+Hva slags informasjon er det snakk om? Avviksmeldingen spesifiserer ikke nøyaktig hvilke typer personopplysninger som er på avveie, men typisk ved slike angrep kan det dreie seg om navn, adresser, telefonnumre, e-postadresser og i verste fall kjøpshistorikk.
+
+15
+00:02:01,520 --> 00:02:10,120
+Datatilsynet har strenge regler for hvordan virksomheter skal håndtere personopplysninger, og de kan gi bøter dersom et selskap ikke har hatt god nok sikkerhet.
+
+16
+00:02:11,560 --> 00:02:16,300
+Ikea samarbeider nå med Datatilsynet og har også politianmeldt saken.
+
+17
+00:02:17,320 --> 00:02:20,840
+For deg som er kunde hos Ikea, er det noen enkle råd å følge.
+
+18
+00:02:21,540 --> 00:02:34,580
+Først og fremst bør du være ekstra oppmerksom på e-poster og tekstmeldinger som ber om personlig informasjon – svindlere kan utnytte slike situasjoner til å sende falske meldinger som ser ut som de kommer fra Ikea.
+
+19
+00:02:36,320 --> 00:02:44,420
+Du bør også vurdere å bytte passord dersom du har en Ikea-konto, og holde et øye med kontoutskriften din for mistenkelige transaksjoner.
+
+20
+00:02:45,120 --> 00:02:58,580
+Selv om det ikke er bekreftet at bankinformasjon er stjålet, er det bedre å være føre var. Ikea har to store varehus i Norge – ett på Slependen utenfor Oslo og ett i Åsane utenfor Bergen.
+
+21
+00:02:59,600 --> 00:03:14,040
+Selskapet har også flere mindre planleggingsstudioer rundt om i landet. Til sammen har Ikea Norge flere hundre ansatte og hundretusenvis av kunder. Mange av disse kan være blant de berørte av datainnbruddet.
+
+22
+00:03:14,880 --> 00:03:19,200
+Datainnbruddet hos Ikea er dessverre ikke en isolert hendelse i Norge.
+
+23
+00:03:20,160 --> 00:03:27,660
+Bare i 2025 rapporterte Datatilsynet om over 3.000 avvik knyttet til personopplysninger fra norske virksomheter.
+
+24
+00:03:28,460 --> 00:03:37,600
+Store selskaper som Ikea, men også offentlige etater, sykehus og kommuner har vært utsatt for lignende angrep de siste årene.
+
+25
+00:03:38,480 --> 00:03:43,480
+Eksperter sier at nordmenn generelt er for lite bevisste på digital sikkerhet i hverdagen.
+
+26
+00:03:44,260 --> 00:03:54,020
+For eksempel bruker mange fortsatt det samme passordet på flere nettsider, noe som gjør det lettere for hackere å få tilgang til personlig informasjon.
+
+27
+00:03:55,220 --> 00:04:01,760
+Datatilsynet anbefaler at alle bruker tofaktorautentisering og passord som er lange og unike for hver tjeneste.
+
+28
+00:04:03,500 --> 00:04:09,420
+Et Ryanair-fly måtte fredag nødlande i Thessaloniki i Hellas etter en svært dramatisk hendelse.
+
+29
+00:04:10,180 --> 00:04:15,680
+Et vindu om bord løsnet, og en mannlig passasjer ble delvis sugd ut av flyet.
+
+30
+00:04:16,320 --> 00:04:36,560
+Hendelsen skjedde mens flyet var på vei fra Thessaloniki til München i Tyskland. Ifølge nyhetsbyrået Reuters, som siterer to kilder med kjennskap til saken, var situasjonen svært alvorlig, men heldigvis endte den ikke med tap av liv. En passasjer har fortalt til radiostasjonen Radio Thessaloniki hva som skjedde.
+
+31
+00:04:37,360 --> 00:04:41,560
+Mannen som satt ved vinduet ble plutselig sugd ut av flyet da vinduet løsnet.
+
+32
+00:04:42,140 --> 00:04:47,000
+Hodet, nakken og skuldrene hans var utenfor flyet, men han hadde heldigvis på seg setebelte.
+
+33
+00:04:47,560 --> 00:04:55,660
+Andre passasjerer i nærheten reagerte raskt og holdt fast i mannen. Etter en stund klarte de å dra ham inn igjen i flyet.
+
+34
+00:04:56,280 --> 00:05:03,880
+Dette var en svært skremmende opplevelse for alle om bord, og det viser hvor viktig det er å alltid bruke setebelte når man flyr.
+
+35
+00:05:04,820 --> 00:05:08,800
+Ryanair har i en uttalelse bekreftet at et vindu løsnet om bord på flyet.
+
+36
+00:05:09,880 --> 00:05:20,440
+Ifølge det greske nyhetsnettstedet News24/7 sier Ryanair at flyet landet som normalt, men at én passasjer fikk helsehjelp som en forholdsregel.
+
+37
+00:05:21,320 --> 00:05:30,540
+Lokale medier melder at mannen er lettere skadet, men at han er i sjokk etter hendelsen. Han får nå behandling på et sykehus i Thessaloniki.
+
+38
+00:05:31,480 --> 00:05:35,020
+De andre passasjerene ble evakuert fra flyet etter nødlandingen.
+
+39
+00:05:35,660 --> 00:05:38,260
+Flyet var på vei fra Thessaloniki til München.
+
+40
+00:05:39,000 --> 00:05:46,360
+Dette er en rute som mange europeiske turister bruker om sommeren, inkludert nordmenn på ferie i Hellas.
+
+41
+00:05:47,320 --> 00:05:48,480
+Hvordan kunne dette skje?
+
+42
+00:05:48,920 --> 00:05:55,900
+Flyvinduer er konstruert for å tåle store trykkforskjeller, og det er svært sjeldent at et vindu løsner under flyging.
+
+43
+00:05:57,020 --> 00:06:05,500
+Luftfartseksperter sier at årsaken kan være en produksjonsfeil, dårlig vedlikehold eller en skade på vinduet som ikke ble oppdaget under inspeksjon.
+
+44
+00:06:06,960 --> 00:06:15,360
+Greske luftfartsmyndigheter har startet en undersøkelse av hendelsen, og Ryanair samarbeider med myndighetene for å finne ut hva som gikk galt.
+
+45
+00:06:16,320 --> 00:06:19,980
+Flyet vil bli grundig inspisert før det får lov til å fly igjen.
+
+46
+00:06:20,660 --> 00:06:26,960
+Saken omtales av flere internasjonale medier, inkludert Reuters og greske nyhetsnettsteder.
+
+47
+00:06:27,780 --> 00:06:37,400
+Denne hendelsen skaper naturligvis bekymring blant flypassasjerer, men det er viktig å huske at flyreiser fortsatt er en av de tryggeste transportformene.
+
+48
+00:06:38,540 --> 00:06:46,900
+Ifølge statistikk fra Den internasjonale luftfartsorganisasjonen (ICAO) er det ekstremt sjeldent med slike alvorlige tekniske feil.
+
+49
+00:06:47,980 --> 00:06:54,180
+Likevel vil nok mange passasjerer tenke seg om to ganger før de setter seg ved vinduet på sin neste flytur.
+
+50
+00:06:55,780 --> 00:07:04,760
+For Ryanair er dette en alvorlig sak som kan skade selskapets omdømme, spesielt dersom undersøkelsen avdekker at selskapet har slurvet med vedlikeholdet.
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  buildCueElements();
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="auto"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-07-05.mp3';
+const TITLE = 'Dagens nyheter – 5. juli 2026';
+const DATE_STR = '';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:02,480 --> 00:00:02,900
+God søndag!
+
+2
+00:00:03,620 --> 00:00:06,700
+I dag skal vi se på to viktige saker fra Vestlandet.
+
+3
+00:00:07,640 --> 00:00:15,200
+Først skal vi snakke om et norsk forskningsgjennombrudd som kan hjelpe MS-pasienter over hele verden med en mye billigere medisin.
+
+4
+00:00:16,000 --> 00:00:23,320
+Deretter skal vi se på en politisk konflikt mellom Bergen kommune og Statnett om hvordan en ny kraftlinje skal bygges.
+
+5
+00:00:23,980 --> 00:00:31,000
+La oss begynne! Norske forskere har gjort et stort gjennombrudd i behandlingen av multippel sklerose, også kalt MS.
+
+6
+00:00:32,360 --> 00:00:37,560
+Forskningsprosjektet heter «Overlord» og har foregått ved Haukeland universitetssjukehus i Bergen.
+
+7
+00:00:38,640 --> 00:00:48,160
+Resultatene er nå publisert i det anerkjente tidsskriftet New England Journal of Medicine, som er et av verdens mest respekterte medisinske tidsskrifter.
+
+8
+00:00:49,150 --> 00:00:55,000
+MS er en nevrologisk sykdom som rammer sentralnervesystemet – altså hjernen og ryggmargen.
+
+9
+00:00:55,820 --> 00:01:03,460
+Ved MS blir isolasjonen rundt nervetrådene skadet, noe som gjør at nervesignalene forstyrres eller blokkeres.
+
+10
+00:01:04,380 --> 00:01:10,180
+Sykdommen kan føre til problemer med å gå, nummenhet i kroppen, synsproblemer og tretthet.
+
+11
+00:01:11,320 --> 00:01:14,820
+Rundt 13 000 mennesker i Norge lever med MS i dag.
+
+12
+00:01:15,660 --> 00:01:22,760
+Fram til nå har den mest effektive medisinen mot MS kostet rundt 300 000 kroner per år for én pasient.
+
+13
+00:01:23,460 --> 00:01:35,440
+Dette er svært dyrt, og i mange fattige land har pasienter ikke hatt råd til denne behandlingen. Men nå har forskerne ved Haukeland vist at et mye billigere medikament – rituksimab – har like god effekt.
+
+14
+00:01:36,410 --> 00:01:40,400
+Prisen for rituksimab er bare rundt 5000 kroner per pasient per år.
+
+15
+00:01:41,120 --> 00:01:44,600
+Det er kun 2 prosent av prisen for det vanlige legemiddelet.
+
+16
+00:01:45,540 --> 00:01:53,780
+Forskningsleder Øivind Torkildsen, som er professor i nevrologi ved Universitetet i Bergen og overlege på Haukeland, er svært optimistisk.
+
+17
+00:01:54,440 --> 00:01:57,780
+Han sier at dette kan få store konsekvenser over hele verden.
+
+18
+00:01:58,540 --> 00:02:02,080
+Flere pasienter kan få medisin, og de kan få den tidligere.
+
+19
+00:02:03,360 --> 00:02:11,560
+Særlig i fattige land vil dette være viktig, fordi helsebudsjettene der er små og dyr medisin ofte ikke er tilgjengelig.
+
+20
+00:02:12,400 --> 00:02:16,620
+En av pasientene som har deltatt i forskningsprosjektet er Hanne Skarstein.
+
+21
+00:02:17,720 --> 00:02:21,100
+Hun er småbarnsmor og fikk MS-diagnosen for fire år siden.
+
+22
+00:02:21,880 --> 00:02:31,700
+Hun forteller at diagnosen var et sjokk, og at hun ikke var veldig positiv til framtiden. Men takket være forskningsprosjektet fikk hun raskt tilgang til den nye medisinen.
+
+23
+00:02:32,400 --> 00:02:34,640
+I dag lever hun et nesten normalt liv.
+
+24
+00:02:35,300 --> 00:02:41,360
+Hun sier at uten dette prosjektet er det ikke sikkert hun kunne ha vært her nå, eller tatt vare på familien sin.
+
+25
+00:02:42,220 --> 00:02:44,460
+Likevel er ikke alt bare positivt.
+
+26
+00:02:45,160 --> 00:02:50,540
+Forskerne frykter at politikk og kommersielle interesser kan stoppe den billige medisinen.
+
+27
+00:02:52,120 --> 00:03:00,020
+Legemiddelindustrien tjener store penger på de dyre MS-medisinene, og det er ikke sikkert at alle vil at en mye billigere versjon skal bli standard.
+
+28
+00:03:01,260 --> 00:03:09,760
+Dette er en påminnelse om at medisinsk forskning ikke bare handler om å finne de beste behandlingene, men også om økonomi og politikk.
+
+29
+00:03:10,840 --> 00:03:28,140
+Bystyret i Bergen har vedtatt å utrede en alternativ trasé for den nye kraftlinjen som skal gå mellom Samnanger og Øygarden. Dette skjer til tross for sterke advarsler fra Statnett, som er det statlige selskapet med ansvar for å drifte og bygge ut det norske kraftnettet.
+
+30
+00:03:28,720 --> 00:03:35,160
+Statnett mener at det haster å få på plass den nye linjen, men politikerne i Bergen vil gå sine egne veier.
+
+31
+00:03:35,980 --> 00:03:39,160
+Bakgrunnen for saken er at Vestlandet trenger mer strøm.
+
+32
+00:03:40,100 --> 00:03:45,440
+Det planlegges mye ny industri i regionen, og det eksisterende kraftnettet har ikke nok kapasitet.
+
+33
+00:03:46,360 --> 00:03:53,160
+Statnett har derfor planlagt en ny kraftlinje mellom Samnanger og Øygarden, to kommuner som ligger vest for Bergen.
+
+34
+00:03:54,020 --> 00:03:59,740
+Samnanger ligger inne i landet, mens Øygarden er en øykommune helt ute ved kysten.
+
+35
+00:04:00,540 --> 00:04:05,200
+Statnett sitt opprinnelige forslag er å bygge kraftlinjen som et luftspenn over land.
+
+36
+00:04:05,860 --> 00:04:12,540
+Det vil si store metallmaster med kabler som henger mellom dem, slik vi er vant til å se i norsk natur.
+
+37
+00:04:13,360 --> 00:04:23,660
+Men bystyret i Bergen mener at dette vil ødelegge landskapet og naturen. De vil i stedet ha en sjøkabel – altså en kabel som legges på bunnen av fjorden.
+
+38
+00:04:24,420 --> 00:04:27,820
+Traseen de foreslår går langs Byfjorden og Herdlefjorden.
+
+39
+00:04:28,540 --> 00:04:34,260
+En sjøkabel ville vært usynlig for folk flest, og den ville ikke påvirke landskapet eller dyrelivet på land.
+
+40
+00:04:34,800 --> 00:04:41,800
+Men Statnett advarer om at en sjøkabel er mye dyrere å bygge, og at den kan være vanskeligere å reparere hvis noe går galt.
+
+41
+00:04:42,540 --> 00:04:51,700
+I tillegg mener Statnett at utredningen av en alternativ trasé vil ta lang tid, og at dette kan forsinke hele prosjektet med flere år.
+
+42
+00:04:52,580 --> 00:05:01,120
+Dette er et klassisk dilemma i norsk energipolitikk: På den ene siden trenger vi mer kraft for å få til det grønne skiftet og ny industri.
+
+43
+00:05:01,920 --> 00:05:05,200
+På den andre siden vil ingen ha kraftlinjer i sitt nærområde.
+
+44
+00:05:05,860 --> 00:05:13,240
+Dette kalles ofte for «NIMBY» – et engelsk uttrykk som står for «Not In My Backyard», altså «ikke i min bakgård».
+
+45
+00:05:14,140 --> 00:05:19,060
+Alle er enige om at vi trenger mer strøm, men ingen vil ha mastene i sin egen kommune.
+
+46
+00:05:19,960 --> 00:05:24,260
+Saken viser også spenningen mellom lokaldemokrati og nasjonale interesser.
+
+47
+00:05:25,040 --> 00:05:30,300
+Skal Bergen kommune kunne bestemme over noe som har betydning for hele regionens strømforsyning?
+
+48
+00:05:30,880 --> 00:05:34,020
+Eller skal staten ved Statnett kunne tvinge gjennom sin løsning?
+
+49
+00:05:34,860 --> 00:05:42,040
+Dette er spørsmål som kommer til å bli diskutert mye framover, og svaret vil ha betydning for mange liknende saker i resten av landet. juli). NRK Vestland. juli). NRK Vestland. Hentet fra https://www.nrk.nå/vestland/ Takk for i dag! Vi snakkes i morgen.
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  buildCueElements();
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>

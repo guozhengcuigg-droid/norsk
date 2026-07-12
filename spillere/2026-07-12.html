@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="auto"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-07-12.mp3';
+const TITLE = 'Dagens nyheter – 12. juli 2026';
+const DATE_STR = '2026-07-12';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:00,100 --> 00:00:05,550
+Natt til søndag 12. juli gjennomførte USA sin tredje angrepsrunde mot Iran denne uken.
+
+2
+00:00:05,500 --> 00:00:12,587
+Amerikanske styrker har angrepet over 140 mål i Iran, ifølge den amerikanske sentralkommandoen Centcom.
+
+3
+00:00:12,587 --> 00:00:16,375
+Dette er det mest omfattende angrepet så langt i konflikten.
+
+4
+00:00:16,375 --> 00:00:24,375
+Angrepene rammet missil- og droneanlegg, marineanlegg, ammunisjonslagre, kommunikasjonsnettverk og kystovervåkning.
+
+5
+00:00:24,375 --> 00:00:31,775
+Eksplosjoner ble rapportert fra flere iranske byer, blant annet Bushehr, Asaluyeh, Bandar Abbas og Kerman.
+
+6
+00:00:31,775 --> 00:00:38,650
+Bakgrunnen for angrepene er at Irans revolusjonsgarde natt til søndag skjøt varselskudd mot et containerskip i Hormuzstredet.
+
+7
+00:00:38,650 --> 00:00:42,662
+Skipet seiler under kypriotisk flagg og ble truffet av skuddene.
+
+8
+00:00:42,662 --> 00:00:47,337
+Ett sivilt besetningsmedlem er savnet, og det har brutt ut brann om bord.
+
+9
+00:00:47,337 --> 00:00:51,825
+Skipet har fått store skader i maskinrommet og kan ikke fortsette seilasen.
+
+10
+00:00:51,825 --> 00:00:54,575
+Mannskapet måtte gå i livbåtene.
+
+11
+00:00:54,575 --> 00:00:59,137
+Etter hendelsen erklærte Iran at Hormuzstredet er stengt inntil videre.
+
+12
+00:00:59,137 --> 00:01:04,287
+Revolusjonsgarden sier at ingen skip får passere før USA stanser sin innblanding.
+
+13
+00:01:04,287 --> 00:01:08,775
+Hormuzstredet er en av verdens viktigste sjøveier for oljetransport.
+
+14
+00:01:08,775 --> 00:01:12,887
+Rundt 20 prosent av verdens olje passerer gjennom dette stredet.
+
+15
+00:01:12,887 --> 00:01:17,800
+En stengning kan få store konsekvenser for verdensøkonomien og oljeprisen.
+
+16
+00:01:17,800 --> 00:01:24,787
+Iran svarte på de amerikanske angrepene med å rette skyts mot amerikanske militærbaser i Bahrain, Kuwait og Qatar.
+
+17
+00:01:24,787 --> 00:01:29,675
+Flyalarmen gikk i Bahrain, og innbyggerne ble bedt om å søke tilflukt.
+
+18
+00:01:29,675 --> 00:01:35,012
+De forente arabiske emirater aktiverte luftvernet sitt mot drone- og rakettangrep.
+
+19
+00:01:35,012 --> 00:01:40,812
+President Donald Trump skal ha beordret angrepene mens han var på Nato-toppmøtet i Ankara i Tyrkia.
+
+20
+00:01:40,812 --> 00:01:46,650
+Natos generalsekretær Mark Rutte støttet angrepene og sa at de var «helt nødvendige».
+
+21
+00:01:46,650 --> 00:01:52,500
+Han uttalte at Iran hadde brutt våpenhvilen, og at USA derfor måtte reagere med styrke.
+
+22
+00:01:52,500 --> 00:01:57,037
+Konflikten mellom USA og Iran har utviklet seg raskt den siste uken.
+
+23
+00:01:57,037 --> 00:02:04,512
+Tidligere i uken angrep Iran tre kommersielle skip i Hormuzstredet, noe som førte til de første amerikanske motangrepene.
+
+24
+00:02:04,512 --> 00:02:10,250
+USA har også trukket tilbake et sanksjonsunntak som tillot Iran å selge olje internasjonalt.
+
+25
+00:02:10,250 --> 00:02:15,300
+Dette betyr at Iran ikke lenger kan selge olje åpent i dollar på verdensmarkedet.
+
+26
+00:02:15,300 --> 00:02:18,662
+For Norge har konflikten også direkte betydning.
+
+27
+00:02:18,662 --> 00:02:25,300
+Det norske rederiet Odfjell, som har hovedkontor i Bergen, har allerede sagt at de ikke vil seile gjennom Hormuzstredet.
+
+28
+00:02:25,300 --> 00:02:33,387
+Flere norske rederier vurderer nå alternative ruter, noe som kan føre til høyere transportkostnader og dyrere varer for norske forbrukere.
+
+29
+00:02:33,387 --> 00:02:39,262
+Hormuzstredet er bare 33 kilometer bredt på det smaleste og ligger mellom Iran og Oman.
+
+30
+00:02:39,262 --> 00:02:45,037
+Rundt 20 prosent av all olje som transporteres med skip i verden, går gjennom dette stredet.
+
+31
+00:02:45,037 --> 00:02:48,675
+En stengning kan føre til at oljeprisen stiger kraftig.
+
+32
+00:02:48,675 --> 00:02:56,012
+For vanlige folk i Norge kan dette bety dyrere bensin og diesel, og høyere strømpriser fordi gassprisene også påvirkes.
+
+33
+00:02:56,012 --> 00:03:00,425
+Konflikten er den alvorligste mellom USA og Iran på mange tiår.
+
+34
+00:03:00,425 --> 00:03:05,862
+Situasjonen utvikler seg time for time, og det internasjonale samfunnet følger nøye med.
+
+35
+00:03:05,862 --> 00:03:12,462
+Flere land har bedt partene om å vise tilbakeholdenhet, men foreløpig ser det ut til at konflikten eskalerer videre.
+
+36
+00:03:12,462 --> 00:03:17,100
+Norges kvartfinale mot England i fotball-VM ble et drama helt til siste slutt.
+
+37
+00:03:17,100 --> 00:03:26,575
+Kampen ble spilt natt til søndag norsk tid på Hard Rock Stadium i Miami, og etter 90 minutter sto det 1–1. Kampen gikk til ekstraomganger, der England til slutt vant 2–1.
+
+38
+00:03:26,575 --> 00:03:31,000
+Norge fikk en drømmestart da Andreas Schjelderup sendte Norge i ledelsen.
+
+39
+00:03:31,000 --> 00:03:36,025
+Norske fans over hele verden jublet, men England utlignet senere i kampen.
+
+40
+00:03:36,025 --> 00:03:43,862
+Fire minutter inn i første ekstraomgang dukket Englands største stjerne, Jude Bellingham, opp og satte inn returen fra keeper Ørjan Nyland.
+
+41
+00:03:43,862 --> 00:03:46,000
+Det ble vinnermålet.
+
+42
+00:03:46,000 --> 00:03:49,912
+Kampen var preget av flere kontroversielle dommeravgjørelser.
+
+43
+00:03:49,912 --> 00:03:53,837
+Den franske dommeren Clément Turpin var i fokus flere ganger.
+
+44
+00:03:53,837 --> 00:04:01,975
+Først ble Englands back Djed Spence tildelt et straffespark etter en duell med Oscar Bobb, men dommeren omgjorde avgjørelsen etter å ha sett på VAR-skjermen.
+
+45
+00:04:01,975 --> 00:04:09,137
+Norge mente også at Nylands utspill ble stoppet av en kameravaier før Englands utligning, og at et norsk mål av Torbjørn
+
+46
+00:04:09,244 --> 00:04:11,981
+Heggem ble feilaktig annullert.
+
+47
+00:04:11,931 --> 00:04:16,056
+Etter kampslutt brøt flere norske spillere sammen i gråt på banen.
+
+48
+00:04:16,056 --> 00:04:22,206
+Keeper Ørjan Nyland var sterkt preget, og landslagssjef Ståle Solbakken var tydelig frustrert.
+
+49
+00:04:22,206 --> 00:04:26,144
+De fleste marginene var mot oss, men det er en del av fotballen.
+
+50
+00:04:26,144 --> 00:04:31,356
+Vi hadde de med oss mot Brasil, men ikke i dag, sa Solbakken på pressekonferansen.
+
+51
+00:04:31,356 --> 00:04:35,331
+Kaptein Martin Ødegaard var skuffet, men også stolt.
+
+52
+00:04:35,331 --> 00:04:37,344
+Det er litt tungt nå.
+
+53
+00:04:37,344 --> 00:04:41,769
+Det er to enkle mål vi slipper inn, og det er ikke noe hjelp å få fra dommeren.
+
+54
+00:04:41,769 --> 00:04:44,006
+Vi får ingenting med oss.
+
+55
+00:04:44,006 --> 00:04:47,994
+Det er surt, men det har vært et eventyr, sa han til TV 2.
+
+56
+00:04:47,994 --> 00:04:52,831
+En helt utslitt Erling Braut Haaland ble byttet ut før den siste ekstraomgangen.
+
+57
+00:04:52,831 --> 00:04:56,331
+Vi skal være stolte, men samtidig lære av dette.
+
+58
+00:04:56,331 --> 00:04:59,969
+En kvartfinale i VM avgjøres av små marginer.
+
+59
+00:04:59,969 --> 00:05:04,519
+Forhåpentligvis klarer vi å lære av dette til neste gang, sa Haaland til VG.
+
+60
+00:05:04,519 --> 00:05:10,031
+England er dermed klar for semifinale, der de møter vinneren av Argentina og Sveits.
+
+61
+00:05:10,031 --> 00:05:14,269
+For Norges del er VM over, men innsatsen har fått mye ros.
+
+62
+00:05:14,269 --> 00:05:20,969
+Norge slo blant annet Brasil tidligere i turneringen, og laget har vist at de kan konkurrere med verdens beste lag.
+
+63
+00:05:20,969 --> 00:05:26,844
+I Bergen og resten av Norge hadde tusenvis av mennesker samlet seg for å se kampen på storskjermer og puber.
+
+64
+00:05:26,844 --> 00:05:33,206
+I Nygårdsparken i Bergen var det folkefest med storskjerm, og stemningen var elektrisk helt til det siste.
+
+65
+00:05:33,206 --> 00:05:37,194
+Mange hadde ventet i kø siden formiddagen for å få en god plass.
+
+66
+00:05:37,194 --> 00:05:41,206
+Da Bellingham scoret vinnermålet, ble det stille i parken.
+
+67
+00:05:41,206 --> 00:05:44,731
+Men etter kampen hyllet publikum spillerne med applaus.
+
+68
+00:05:44,731 --> 00:05:48,869
+Norge har aldri kommet lenger enn til kvartfinale i et fotball-VM.
+
+69
+00:05:48,869 --> 00:05:53,881
+Denne gangen var laget svært nær en semifinaleplass, og marginene var små.
+
+70
+00:05:53,881 --> 00:06:02,656
+Landslagssjef Solbakken oppsummerte følelsene slik: – Selv om det er blytungt nå, tror jeg alle om en uke kan være enige om at sommeren 2026 var ganske OK.
+
+71
+00:06:02,656 --> 00:06:04,531
+Ord | Forklaring
+
+72
+00:06:04,531 --> 00:06:09,006
+varselskudd | et skudd som avfyres for å advare, ikke for å treffe
+
+73
+00:06:09,006 --> 00:06:13,306
+livbåtene | små båter som brukes for å evakuere et skip i nød
+
+74
+00:06:13,306 --> 00:06:18,269
+inntil videre | fram til noe nytt blir bestemt (for now / until further notice)
+
+75
+00:06:18,269 --> 00:06:22,506
+ammunisjonslagre | steder der man oppbevarer våpen og ammunisjon
+
+76
+00:06:22,506 --> 00:06:28,531
+sanksjonsunntak | et unntak fra straffetiltak (sanksjoner) som lar et land handle fritt
+
+77
+00:06:28,531 --> 00:06:32,819
+omgjorde | endret en tidligere beslutning (past tense of omgjøre)
+
+78
+00:06:32,819 --> 00:06:36,469
+annullert | erklært ugyldig, kansellert
+
+79
+00:06:36,469 --> 00:06:40,994
+*Kilder: NRK, TV 2, VG.
+
+80
+00:06:40,994 --> 00:06:45,669
+Artikkelen er forenklet til B1 bokmål for læringsformål.*
+
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  buildCueElements();
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>

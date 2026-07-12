@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="auto"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-07-06.mp3';
+const TITLE = 'Dagens nyheter – 6. juli 2026';
+const DATE_STR = '';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:02,380 --> 00:00:02,820
+God mandag!
+
+2
+00:00:03,420 --> 00:00:11,080
+I dag skal vi se på to viktige saker: en miljøkonflikt i vårt eget fylke Vestland, og en stor verdensnyhet fra Iran.
+
+3
+00:00:11,720 --> 00:00:12,320
+La oss begynne!
+
+4
+00:00:13,260 --> 00:00:19,180
+Førdefjorden i Sunnfjord har vært sentrum for en av Norges største miljøkonflikter de siste årene.
+
+5
+00:00:19,880 --> 00:00:22,260
+I dag har konflikten nådd et nytt nivå.
+
+6
+00:00:23,340 --> 00:00:31,560
+Naturvernforbundet og Natur og Ungdom ber statsminister Jonas Gahr Støre om å gripe inn og stanse dumpingen av gruveavfall i fjorden.
+
+7
+00:00:32,340 --> 00:00:34,100
+Bakgrunnen er at Høyesterett 17.
+
+8
+00:00:34,520 --> 00:00:40,040
+juni slo fast at tillatelsen til å dumpe gruveavfall i Førdefjorden ble gitt ulovlig.
+
+9
+00:00:40,520 --> 00:00:41,340
+Dommen var enstemmig.
+
+10
+00:00:42,820 --> 00:00:53,240
+Likevel har klima- og miljøminister Andreas Bjelland Eriksen bestemt at driften kan fortsette mens myndighetene vurderer en ny midlertidig tillatelse.
+
+11
+00:00:54,060 --> 00:00:57,960
+Selskapet Nordic Mining utvinner rutil og granat fra Engebøfjellet.
+
+12
+00:00:58,560 --> 00:01:07,100
+Planen er å dumpe rundt 170 millioner tonn gruveavfall i Førdefjorden. Dette vil ifølge miljøorganisasjonene ødelegge livet i fjorden.
+
+13
+00:01:07,960 --> 00:01:17,240
+Regjeringen på sin side mener at fjorden tåler minst ett år til med utslipp, og har sagt dette til ESA – overvåkningsorganet for EØS-avtalen.
+
+14
+00:01:18,360 --> 00:01:23,220
+Leder i Natur og Ungdom, Sigrid Hoddevik Losnegård, er sterkt kritisk.
+
+15
+00:01:23,640 --> 00:01:30,080
+Hun sier at regjeringen er på en farlig kurs som kan skade tilliten til både politikere og domstoler.
+
+16
+00:01:30,880 --> 00:01:38,660
+I et brev til statsministerens kontor krever miljøorganisasjonene at de ulovlige tillatelsene kalles tilbake.
+
+17
+00:01:39,560 --> 00:01:43,340
+– Det er på tide at Støre griper inn, skriver Losnegård i en pressemelding.
+
+18
+00:01:43,980 --> 00:01:46,880
+Saken har også fått internasjonal oppmerksomhet.
+
+19
+00:01:47,580 --> 00:01:54,300
+ESA har bedt regjeringen forklare hvorfor dumpingen fortsetter etter at Høyesterett kjente tillatelsen ugyldig.
+
+20
+00:01:55,560 --> 00:02:03,140
+Regjeringen svarer at en stans nå vil skape usikkerhet for mange arbeidsplasser og kan svekke tilgangen på viktige mineraler.
+
+21
+00:02:04,080 --> 00:02:07,560
+Konflikten i Førdefjorden handler om mer enn bare miljø.
+
+22
+00:02:08,400 --> 00:02:18,280
+Den handler om hva som veier tyngst: naturvern eller arbeidsplasser, lover eller politiske avgjørelser, nasjonale interesser eller lokale konsekvenser.
+
+23
+00:02:19,500 --> 00:02:25,380
+Mange i Vestland følger saken tett, fordi den kan få konsekvenser for hvordan norsk natur forvaltes i fremtiden.
+
+24
+00:02:26,180 --> 00:02:30,080
+I Iran blir ayatollah Ali Khamenei begravet i dag, 6.
+
+25
+00:02:31,180 --> 00:02:39,800
+Khamenei var Irans øverste leder i nesten 37 år, fra 1989 til han ble drept i et amerikansk-israelsk luftangrep 28.
+
+26
+00:02:40,580 --> 00:02:41,460
+februar i år.
+
+27
+00:02:42,010 --> 00:02:43,620
+Han ble 86 år gammel.
+
+28
+00:02:44,340 --> 00:02:48,000
+Khamenei var en av verdens mektigste og mest kontroversielle ledere.
+
+29
+00:02:48,900 --> 00:02:56,740
+Han hadde nesten eneveldig makt i Iran gjennom systemet som kalles «velayat-e faqih» – den rettslærdes vergemål.
+
+30
+00:02:57,540 --> 00:03:03,740
+Dette systemet gir den øverste religiøse lederen siste ord i alle viktige spørsmål.
+
+31
+00:03:04,400 --> 00:03:09,280
+Da Khamenei ble drept i februar, erklærte Iran 40 dagers landesorg.
+
+32
+00:03:09,650 --> 00:03:16,680
+De offentlige seremoniene startet 4. juli i Teheran, der tusenvis av iranere deltok i prosesjoner.
+
+33
+00:03:17,460 --> 00:03:20,720
+I dag avsluttes sørgeperioden med selve begravelsen.
+
+34
+00:03:21,480 --> 00:03:28,040
+Iranske myndigheter har midlertidig stanset alt diplomatisk arbeid med USA under seremoniene.
+
+35
+00:03:28,840 --> 00:03:31,380
+Reaksjonene på Khameneis død har vært delte.
+
+36
+00:03:32,020 --> 00:03:38,520
+Noen jubler over at en brutal diktator er borte, mens andre sørger over tapet av en religiøs leder.
+
+37
+00:03:39,240 --> 00:03:46,000
+Uansett hva man mener om Khamenei, er det klart at en historisk epoke i Irans historie nå er over.
+
+38
+00:03:46,760 --> 00:03:50,340
+Spørsmålet alle stiller seg er: Hva skjer med Iran nå?
+
+39
+00:03:51,200 --> 00:03:55,060
+For Norge og resten av verden er dette en viktig hendelse.
+
+40
+00:03:56,180 --> 00:04:06,460
+Iran er en sentral aktør i Midtøsten, og hvem som tar over makten, vil påvirke både regional stabilitet og internasjonale forhold – inkludert oljepriser og sikkerhetspolitikk. NRK Vestland. Vi snakkes i morgen.
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  buildCueElements();
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>

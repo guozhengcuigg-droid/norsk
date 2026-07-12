@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="auto"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-07-08.mp3';
+const TITLE = 'Dagens nyheter – 8. juli 2026';
+const DATE_STR = '2026-07-08';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:03,420 --> 00:00:07,380
+En dom fra Hordaland tingrett har skapt overskrifter i Bergen denne uken.
+
+2
+00:00:08,140 --> 00:00:15,500
+Bergen kommune er dømt for ulovlig gjengjelding mot et verneombod som varslet om kritikkverdige forhold på arbeidsplassen.
+
+3
+00:00:16,300 --> 00:00:20,820
+Saken handler om et verneombod ved Kirkebirkeland bufellesskap i Fana.
+
+4
+00:00:21,820 --> 00:00:34,580
+Et verneombod er en person som skal passe på at arbeidsmiljøet er trygt og godt for alle ansatte. I fjor høst varslet denne personen Arbeidstilsynet om forhold ved arbeidsplassen som han mente var problematiske.
+
+5
+00:00:35,140 --> 00:00:37,540
+Kort tid etterpå mistet han jobben.
+
+6
+00:00:38,460 --> 00:00:41,340
+Verneombodet bestemte seg for å saksøke Bergen kommune.
+
+7
+00:00:42,020 --> 00:00:46,240
+Han mente at han ble sagt opp som en direkte straff for at han hadde varslet.
+
+8
+00:00:47,080 --> 00:00:58,200
+Det er ulovlig i Norge – arbeidsgivere kan ikke straffe ansatte som sier fra om kritikkverdige forhold. Dette kalles gjengjelding, og det er beskyttet av arbeidsmiljøloven.
+
+9
+00:00:58,920 --> 00:01:00,360
+Nå har retten konkludert.
+
+10
+00:01:01,160 --> 00:01:08,600
+Hordaland tingrett slår fast at Bergen kommune utsatte verneombodet for ulovlig gjengjelding ved to konkrete anledninger.
+
+11
+00:01:09,580 --> 00:01:13,860
+Kommunen må betale 25.000 kroner i oppreisning til verneombodet.
+
+12
+00:01:14,400 --> 00:01:22,700
+Oppreisning er en sum penger man får som kompensasjon for en urett man har blitt utsatt for. Likevel får ikke verneombodet jobben tilbake.
+
+13
+00:01:23,460 --> 00:01:28,340
+Flertallet i retten mente at kommunen hadde saklig grunn til oppsigelsen.
+
+14
+00:01:28,880 --> 00:01:35,100
+Grunnen var at verneombodet hadde brukt pasientopplysninger i varslene sine, og det brøt taushetsplikten.
+
+15
+00:01:35,780 --> 00:01:40,080
+Taushetsplikt betyr at man ikke kan dele informasjon om andre personer uten lov.
+
+16
+00:01:41,040 --> 00:01:56,740
+Advokaten til verneombodet, Helene Frich Hanøy, sier at klienten er fornøyd med at retten slo fast at han ble utsatt for gjengjelding. Hun legger til at han håper dommen kan bidra til bedre behandling av varslere i fremtiden.
+
+17
+00:01:57,440 --> 00:02:04,540
+Saken viser hvor komplisert varsling kan være – man har rett til å si fra, men man må også følge reglene for personvern.
+
+18
+00:02:06,060 --> 00:02:16,220
+Teknologiselskapet OpenAI, som står bak ChatGPT, har annonsert at deres nyeste og kraftigste KI-modeller blir tilgjengelige for offentligheten allerede torsdag denne uken.
+
+19
+00:02:16,720 --> 00:02:21,340
+Modellene heter GPT-5.6 Sol, Terra og Luna.
+
+20
+00:02:22,900 --> 00:02:26,840
+Lanseringen skjer etter at amerikanske myndigheter har gitt grønt lys.
+
+21
+00:02:27,940 --> 00:02:34,960
+Det har vært mye diskusjon om hvor kraftige KI-modeller bør være, og om de kan skape problemer hvis de havner i feil hender.
+
+22
+00:02:35,740 --> 00:02:40,380
+OpenAI selv har tidligere sagt at de var bekymret for hva modellene kunne gjøre.
+
+23
+00:02:42,340 --> 00:02:45,500
+Den nye GPT-5.6-familien består av tre forskjellige modeller.
+
+24
+00:02:46,600 --> 00:02:52,600
+Sol er den kraftigste, Terra er mellommodellen, og Luna er den minste og rimeligste.
+
+25
+00:02:53,420 --> 00:03:04,940
+De har ulik styrke og pris, slik at både store selskaper og privatpersoner kan velge den som passer best for dem. OpenAI er ikke alene om å lansere kraftige KI-modeller.
+
+26
+00:03:05,680 --> 00:03:09,520
+Konkurrenten Anthropic har allerede lansert tilsvarende modeller.
+
+27
+00:03:10,320 --> 00:03:18,880
+Konkurransen mellom KI-selskapene blir stadig hardere, og teknologien utvikler seg i et tempo som mange synes er både spennende og skremmende.
+
+28
+00:03:20,420 --> 00:03:24,280
+For vanlige brukere betyr dette at KI-verktøyene blir stadig bedre.
+
+29
+00:03:25,000 --> 00:03:30,720
+De kan hjelpe med alt fra å skrive tekster og oversette språk til å analysere data og lage bilder.
+
+30
+00:03:31,620 --> 00:03:38,080
+Samtidig stiller utviklingen nye spørsmål: Hvordan skal vi bruke denne teknologien på en trygg måte?
+
+31
+00:03:38,800 --> 00:03:40,100
+Og hvem skal bestemme reglene?
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  buildCueElements();
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>
