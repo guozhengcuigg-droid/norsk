@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+    .player-card { position: relative; top: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="auto"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"><p style="color:#888;font-size:0.85rem;">Laster tekst ...</p></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-07-13.mp3';
+const TITLE = 'Dagens nyheter – 13. juli 2026';
+const DATE_STR = '2026-07-13';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:03,920 --> 00:00:08,360
+Mandag ettermiddag skjedde det en dramatisk ulykke i Bergen sentrum.
+
+2
+00:00:09,140 --> 00:00:18,000
+En mann i rullestol kjørte langs bryggekanten ved Damsgårdssundet, et område som ligger mellom Nordnes og Laksevåg like ved Puddefjorden.
+
+3
+00:00:18,640 --> 00:00:24,380
+Klokken var rundt halv fem på ettermiddagen, og været var fint med solskinn og rundt 22 varmegrader.
+
+4
+00:00:25,440 --> 00:00:33,440
+Mange mennesker var ute og nøt den fine sommerdagen, både på kaiene, langs turstiene og i parkene i nærheten av sjøen.
+
+5
+00:00:34,220 --> 00:00:40,060
+Ifølge politiet i Vest politidistrikt har mannen selv forklart hva som skjedde rett før ulykken.
+
+6
+00:00:40,900 --> 00:00:44,080
+Telefonen hans begynte å ringe mens han kjørte langs bryggekanten.
+
+7
+00:00:44,840 --> 00:00:50,640
+Han ble litt uoppmerksom i det øyeblikket, akkurat som så mange av oss kan bli når telefonen ringer.
+
+8
+00:00:51,320 --> 00:00:57,120
+Da han skulle ta telefonen opp av lommen, mistet han kontrollen over den elektriske rullestolen.
+
+9
+00:00:57,860 --> 00:01:02,480
+Rullestolen trillet rett utfor bryggekanten, og mannen falt i det kalde vannet i Damsgårdssundet.
+
+10
+00:01:02,800 --> 00:01:10,540
+Heldigvis var det mange mennesker i nærheten som så hva som skjedde og ringte nødnummeret 113 med en gang.
+
+11
+00:01:11,460 --> 00:01:14,320
+Nødetatene reagerte ekstremt raskt på meldingen.
+
+12
+00:01:14,820 --> 00:01:21,140
+Politiet, brannvesenet og ambulansepersonell kom til stedet bare noen få minutter etter at ulykken ble meldt inn.
+
+13
+00:01:21,880 --> 00:01:27,440
+Mannen ble raskt og effektivt hentet opp av det kalde sjøvannet av redningspersonell på stedet.
+
+14
+00:01:28,160 --> 00:01:36,260
+Han var ved bevissthet da han ble reddet, men helsepersonell ville være helt sikre på at han ikke hadde fått alvorlige skader.
+
+15
+00:01:36,960 --> 00:01:42,140
+Derfor ble han tatt med til Legevakten i Bergen sentrum for en grundig medisinsk undersøkelse.
+
+16
+00:01:42,740 --> 00:01:47,420
+Mens mannen fikk legehjelp på Legevakten, fortsatte arbeidet på ulykkesstedet.
+
+17
+00:01:48,040 --> 00:01:55,260
+Dykkere fra Bergen brannvesen fikk den spesielle oppgaven med å dykke ned og hente opp rullestolen fra bunnen av Damsgårdssundet.
+
+18
+00:01:56,280 --> 00:02:02,520
+Det er ikke hver dag brannvesenet må hente en rullestol fra sjøbunnen, men de håndterte oppgaven profesjonelt.
+
+19
+00:02:04,020 --> 00:02:21,260
+Vest politidistrikt bekreftet senere på ettermiddagen at nødetatene hadde avsluttet alt arbeid på stedet, og at situasjonen var helt under kontroll. Denne hendelsen minner oss om hvor viktig det er å være oppmerksom når vi ferdes nær vann, enten vi går, sykler eller bruker rullestol.
+
+20
+00:02:22,180 --> 00:02:32,140
+I Bergen er det mange kaier, brygger og sjøkanter der folk går tur og nyter utsikten over fjorden, spesielt om sommeren når været er varmt og godt.
+
+21
+00:02:33,240 --> 00:02:42,920
+For personer som bruker rullestol, kan bryggekanter uten gjerde eller rekkverk være spesielt farlige, og denne ulykken viser hvor fort noe uventet kan skje.
+
+22
+00:02:43,940 --> 00:02:54,060
+Heldigvis fikk denne historien en god utgang takket være raske vitner som ringte etter hjelp med en gang, og et effektivt og profesjonelt nødetatssystem i Bergen.
+
+23
+00:02:55,480 --> 00:03:04,180
+Sotra Link Construction er et stort entreprenørselskap som for tiden jobber med et av Norges mest omfattende veiprosjekter – det nye Sotra-sambandet.
+
+24
+00:03:04,860 --> 00:03:13,980
+Dette er en ny fastlandsforbindelse som skal erstatte den gamle Sotrabroen og gi bedre vei mellom fastlandet i Bergen og øykommunen Øygarden.
+
+25
+00:03:15,680 --> 00:03:28,480
+Prosjektet koster flere milliarder kroner og er svært viktig for alle som bor og jobber vest for Bergen. Men nå har firmaet havnet i en ubehagelig økonomisk konflikt med Vestland fylkeskommune.
+
+26
+00:03:29,080 --> 00:03:32,380
+Konflikten dreier seg om en regning på 740.000 kroner.
+
+27
+00:03:33,920 --> 00:03:45,080
+Fylkeskommunen sendte regningen til Sotra Link Construction etter at en overvannsledning kollapset ved Bildøybakken på Sotra, et område som ligger like ved byggeplassen for det nye veiprosjektet.
+
+28
+00:03:46,200 --> 00:03:58,620
+Overvannsledninger er store rør under bakken som fører bort regnvann, og når slike ledninger kollapser kan det skape store problemer med oversvømmelser og skader på veier og bygninger i nærområdet.
+
+29
+00:04:00,220 --> 00:04:04,280
+Ifølge Vestland fylkeskommune er det ingen tvil om hvem som har skylden for skaden.
+
+30
+00:04:04,960 --> 00:04:12,760
+De mener at ledningen ble ødelagt da Sotra Link Construction gravde i bakken for å legge en ny kabelkanal langs fylkesveien.
+
+31
+00:04:14,440 --> 00:04:24,760
+Gravearbeidet skal ha skjedd akkurat der ledningen gikk, og fylkeskommunen argumenterer for at det er entreprenørens ansvar å være forsiktig når man graver nær eksisterende infrastruktur.
+
+32
+00:04:25,660 --> 00:04:29,660
+De krever derfor at firmaet betaler hele regningen for reparasjonsarbeidet.
+
+33
+00:04:30,500 --> 00:04:35,460
+Sotra Link Construction er helt uenig i denne vurderingen og nekter å betale.
+
+34
+00:04:36,240 --> 00:04:41,400
+Firmaet hevder at vannledningen kollapset et helt annet sted enn der de faktisk gravde.
+
+35
+00:04:41,900 --> 00:04:50,220
+De mener at den virkelige årsaken til kollapsen er at rørene er gamle og at kommunen ikke har vedlikeholdt dem godt nok over mange år.
+
+36
+00:04:51,400 --> 00:04:58,620
+Ifølge firmaets representanter var det bare et spørsmål om tid før noe slikt kom til å skje, uavhengig av deres gravearbeid.
+
+37
+00:04:59,260 --> 00:05:04,280
+De peker på at gammel infrastruktur er et velkjent problem i mange norske kommuner.
+
+38
+00:05:05,660 --> 00:05:10,860
+Denne typen konflikter om ansvar og erstatning er dessverre ikke uvanlige i store byggeprosjekter.
+
+39
+00:05:11,520 --> 00:05:19,280
+Når noe uventet skjer under anleggsarbeid, oppstår det ofte diskusjoner om hvem som har skylden og hvem som må betale for skadene.
+
+40
+00:05:20,880 --> 00:05:27,640
+Sotra-sambandet er et gigantisk prosjekt som involverer mange forskjellige aktører, entreprenører og underleverandører.
+
+41
+00:05:28,500 --> 00:05:38,740
+Slike uenigheter kan potensielt føre til både forsinkelser og ekstra kostnader for prosjektet, noe som bekymrer mange av dem som venter på den nye veiforbindelsen.
+
+42
+00:05:40,040 --> 00:05:42,480
+Foreløpig er det ikke klart hvordan denne saken vil ende.
+
+43
+00:05:43,300 --> 00:05:50,120
+Hvis partene ikke blir enige gjennom forhandlinger, kan konflikten ende opp i rettssystemet for en endelig avgjørelse.
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  console.log('VTT cues loaded:', cues.length);
+  buildCueElements();
+  // Show first cue as indicator
+  if (cues.length > 0) {
+    const info = document.createElement('div');
+    info.style.cssText = 'font-size:0.75rem;color:#aaa;margin-bottom:8px;padding:0 14px;';
+    info.textContent = cues.length + ' avsnitt lastet';
+    textDisplay.insertBefore(info, textDisplay.firstChild);
+  }
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      // Scroll into view (commented: causes issues in WeChat browser)
+      // el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>
