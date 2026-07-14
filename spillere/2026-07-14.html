@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+    .player-card { position: relative; top: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="auto"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"><p style="color:#888;font-size:0.85rem;">Laster tekst ...</p></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-07-14.mp3';
+const TITLE = 'Dagens nyheter – 14. juli 2026';
+const DATE_STR = '2026-07-14';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:04,020 --> 00:00:10,440
+Meteorologisk institutt melder at det er hetebølge hele åtte steder i Sør-Norge tirsdag 14.
+
+2
+00:00:11,580 --> 00:00:16,420
+En hetebølge betyr at temperaturen er over 28 grader i minst fem dager på rad.
+
+3
+00:00:16,980 --> 00:00:20,160
+Dette er uvanlig varmt for Norge, selv om sommeren.
+
+4
+00:00:20,640 --> 00:00:27,180
+Åtte steder som opplever dette samtidig er ganske sjeldent og viser hvor kraftig denne varmebølgen faktisk er.
+
+5
+00:00:28,980 --> 00:00:33,000
+Flere steder kan også sette nye varmerekorder denne uken, ifølge meteorologene.
+
+6
+00:00:34,040 --> 00:00:39,020
+Noen målestasjoner har allerede registrert sine høyeste julitemperaturer på over ti år.
+
+7
+00:00:40,060 --> 00:00:43,620
+Hetebølgen kommer fra et høytrykk som ligger over Sør-Skandinavia.
+
+8
+00:00:44,300 --> 00:00:48,040
+Høytrykket bringer varm luft fra Sør-Europa nordover mot Norge.
+
+9
+00:00:48,860 --> 00:00:56,500
+Denne varme luften blir liggende over landet fordi høytrykket fungerer som en vegg som hindrer kaldere luft fra nord i å komme inn.
+
+10
+00:00:57,480 --> 00:01:05,820
+Samtidig er det lite vind og nesten ingen skyer, noe som gjør at temperaturen stiger raskt om dagen og holder seg høy også om natten.
+
+11
+00:01:06,840 --> 00:01:14,240
+Meteorologene sier at dette været kan vare helt til neste uke, og kanskje enda lenger hvis høytrykket holder seg stabilt.
+
+12
+00:01:15,240 --> 00:01:18,080
+De varmeste stedene ligger på Østlandet og Sørlandet.
+
+13
+00:01:18,760 --> 00:01:29,640
+Byer som Oslo, Drammen, Kristiansand og Porsgrunn har allerede målt temperaturer over 30 grader. Også Bergen og Stavanger på Vestlandet får uvanlig varmt vær.
+
+14
+00:01:30,580 --> 00:01:38,920
+I Bergen er det ventet opp mot 27-28 grader de neste dagene, noe som er svært sjeldent for byen som er kjent for mye regn.
+
+15
+00:01:39,700 --> 00:01:55,640
+Mange bergensere er ute og nyter solen – byens parker, som Nygårdsparken og Nordnesparken, er fulle av mennesker som soler seg og har piknik. For en by der det ofte regner over 200 dager i året, er dette noe helt spesielt.
+
+16
+00:01:56,480 --> 00:01:58,720
+Mange nordmenn nyter det varme været.
+
+17
+00:01:59,220 --> 00:02:03,080
+Strender og badeplasser over hele Sør-Norge er fulle av mennesker.
+
+18
+00:02:03,940 --> 00:02:12,020
+Familier griller i parker, barn spiser is, og folk bader i sjøen og i innsjøer. Men varmen kan også være farlig.
+
+19
+00:02:12,820 --> 00:02:18,980
+Helsemyndighetene minner folk om å drikke mye vann, bruke solkrem og ikke være for lenge i solen midt på dagen.
+
+20
+00:02:19,760 --> 00:02:23,260
+Eldre mennesker og små barn er spesielt utsatt for heteslag.
+
+21
+00:02:24,620 --> 00:02:28,960
+Meteorologisk institutt har også sendt ut farevarsel for skogbrann i flere fylker.
+
+22
+00:02:30,060 --> 00:02:34,800
+Når det er så varmt og tørt over lang tid, øker faren for at skogbranner starter.
+
+23
+00:02:36,140 --> 00:02:41,500
+Folk oppfordres til å være ekstra forsiktige med ild utendørs, for eksempel med engangsgriller.
+
+24
+00:02:42,200 --> 00:02:48,480
+I noen kommuner har man til og med innført totalforbud mot all bruk av åpen ild i skog og mark.
+
+25
+00:02:49,800 --> 00:02:57,920
+Samtidig kan bønder oppleve problemer fordi avlingene trenger mer vann enn vanlig, og noen steder har vanningen allerede startet tidligere enn normalt.
+
+26
+00:02:58,920 --> 00:03:03,060
+Sommeren 2026 blir husket som en av de varmeste på lenge!
+
+27
+00:03:04,100 --> 00:03:06,580
+Krigen i Ukraina fortsetter å ta mange sivile liv.
+
+28
+00:03:07,460 --> 00:03:25,900
+Ifølge FNs menneskerettighetskontor i Ukraina ble minst 293 sivile drept i juni 2026. Dette er det høyeste antallet sivile drepte på én måned siden april 2022, bare to måneder etter at Russland startet sin fullskala invasjon av landet.
+
+29
+00:03:26,620 --> 00:03:36,560
+I tillegg ble 1990 mennesker såret i løpet av juni måned. De høye dødstallene skyldes en rekke store russiske angrep mot ukrainske byer i juni.
+
+30
+00:03:37,340 --> 00:03:47,620
+Hovedstaden Kyiv ble angrepet flere ganger med raketter og droner. Også byer som Kharkiv, Zaporizjzja og Odesa opplevde kraftige angrep.
+
+31
+00:03:48,520 --> 00:03:51,880
+Mange av de drepte var vanlige mennesker som bodde i boligområder.
+
+32
+00:03:52,520 --> 00:04:10,600
+FN sier at de fleste sivile dødsfallene skjedde på grunn av eksplosive våpen med stort skadeområde, som raketter og bomber. Disse våpnene er spesielt farlige i tettbygde strøk fordi de ødelegger hele bygninger og gjør det vanskelig for folk å søke beskyttelse.
+
+33
+00:04:12,480 --> 00:04:19,200
+President Volodymyr Zelenskyj i Ukraina sier at landet ikke lenger klarer å forsvare seg godt nok mot luftangrep.
+
+34
+00:04:20,020 --> 00:04:36,740
+I et intervju med BBC forrige uke sa Zelenskyj at Ukrainas luftforsvar er svekket og at landet trenger mer hjelp fra sine vestlige partnere. – Vi klarer alt annet selv, men når det gjelder luftforsvar, trenger vi våre partneres besluttsomhet, sa presidenten.
+
+35
+00:04:37,700 --> 00:04:40,900
+Den humanitære situasjonen i Ukraina blir stadig verre.
+
+36
+00:04:41,600 --> 00:04:45,100
+Sykehus, skoler og bolighus blir ødelagt i angrepene.
+
+37
+00:04:45,760 --> 00:04:51,460
+Mange sivile har mistet hjemmene sine og lever nå i midlertidige leirer eller hos slektninger.
+
+38
+00:04:52,200 --> 00:05:05,880
+Tilgangen til rent vann, elektrisitet og medisinsk hjelp er vanskelig i flere områder. Spesielt i frontlinjebyene i Øst-Ukraina er situasjonen kritisk, der mange eldre og syke ikke har mulighet til å evakuere.
+
+39
+00:05:07,300 --> 00:05:18,160
+Hjelpeorganisasjoner som Røde Kors og FN jobber hardt for å gi mat, vann og medisiner til de som trenger det mest, men de rapporterer at behovene er større enn ressursene de har tilgjengelig.
+
+40
+00:05:18,640 --> 00:05:27,680
+Det internasjonale samfunnet følger situasjonen nøye. Norge har gitt milliarder av kroner i støtte til Ukraina, både militært og humanitært.
+
+41
+00:05:29,000 --> 00:05:38,680
+Norsk Folkehjelp og Flyktninghjelpen er blant de norske organisasjonene som jobber aktivt i Ukraina for å hjelpe sivile.
+
+42
+00:05:39,900 --> 00:05:53,460
+Mange norske kommuner har også tatt imot ukrainske flyktninger og gitt dem bolig, skoleplass og helsehjelp. Men eksperter sier at mer hjelp er nødvendig hvis Ukraina skal kunne beskytte sine sivile mot fremtidige angrep.
+
+43
+00:05:54,440 --> 00:06:01,440
+Foreløpig er det ingen tegn til at krigen vil ta slutt med det første, og sivile fortsetter å betale den høyeste prisen.
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  console.log('VTT cues loaded:', cues.length);
+  buildCueElements();
+  // Show first cue as indicator
+  if (cues.length > 0) {
+    const info = document.createElement('div');
+    info.style.cssText = 'font-size:0.75rem;color:#aaa;margin-bottom:8px;padding:0 14px;';
+    info.textContent = cues.length + ' avsnitt lastet';
+    textDisplay.insertBefore(info, textDisplay.firstChild);
+  }
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      // Scroll into view (commented: causes issues in WeChat browser)
+      // el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>
