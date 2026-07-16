@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+    .player-card { position: relative; top: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="metadata"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"><p style="color:#888;font-size:0.85rem;">Laster tekst ...</p></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-07-16.mp3';
+const TITLE = 'Dagens nyheter – 16. juli 2026';
+const DATE_STR = '2026-07-16';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:03,020 --> 00:00:06,600
+Bergen har alltid vært en populær destinasjon for cruiseturister.
+
+2
+00:00:07,400 --> 00:00:33,860
+Byen mellom de syv fjell tiltrekker seg besøkende fra hele verden med sin vakre natur, historiske brygge og nærhet til fjordene. I år har Bergen opplevd et rekordår for cruiseturisme, men med en overraskende vri: de fleste turistene kommer ikke om sommeren slik man skulle tro. Tidligere var sommermånedene juni, juli og august den travleste perioden for cruiseskip i Bergen.
+
+3
+00:00:34,720 --> 00:00:41,740
+Turistene strømmet til byen, fylte Bryggen og fisketorget, og skapte en travel og livlig atmosfære i sentrum.
+
+4
+00:00:42,560 --> 00:00:45,060
+Men i år har mønsteret endret seg betydelig.
+
+5
+00:00:46,060 --> 00:00:58,480
+Ifølge NRK Vestland viser nye tall at rekordmange cruiseturister besøker Bergen, men de kommer i større grad om våren og høsten enn om sommeren. Denne endringen har flere årsaker.
+
+6
+00:00:59,120 --> 00:01:07,400
+For det første har cruiseselskapene begynt å tilby flere reiser i skuldersesongene – altså perioden mellom høysesong og lavsesong.
+
+7
+00:01:08,220 --> 00:01:16,900
+Våren og høsten byr på mildere temperaturer i Sør-Europa, noe som gjør at turister velger å reise nordover på andre tider av året.
+
+8
+00:01:17,960 --> 00:01:30,260
+For det andre er det billigere å booke cruise utenom sommersesongen, både for rederiene og for passasjerene. Mange turister foretrekker også å unngå de store folkemengdene som preger sommerbyen Bergen.
+
+9
+00:01:31,040 --> 00:01:39,400
+For Bergen by betyr dette både muligheter og utfordringer. På den ene siden er det positivt at turistene sprer seg jevnere utover året.
+
+10
+00:01:40,020 --> 00:01:47,940
+Dette gir mer stabile inntekter for hoteller, restauranter og butikker gjennom hele året, i stedet for bare noen få sommermåneder.
+
+11
+00:01:49,400 --> 00:01:52,320
+På den andre siden må byen tilpasse seg den nye virkeligheten.
+
+12
+00:01:53,120 --> 00:01:59,720
+Infrastruktur som transport, toaletter og renovasjon må være tilgjengelig året rundt, ikke bare om sommeren.
+
+13
+00:02:00,380 --> 00:02:06,020
+Kommunen må også tenke på hvordan man kan gi en god opplevelse til turister uansett årstid.
+
+14
+00:02:06,980 --> 00:02:13,080
+Den nye cruisesesongen betyr også at Bergen får flere besøkende i perioder hvor været er mer ustabilt.
+
+15
+00:02:13,860 --> 00:02:19,980
+Høsten i Bergen er kjent for mye regn og vind, mens våren kan være uforutsigbar med både sol og snø.
+
+16
+00:02:20,960 --> 00:02:24,900
+Dette stiller krav til både turistnæringen og turistene selv.
+
+17
+00:02:25,780 --> 00:02:32,060
+Likevel er det tydelig at Bergen fortsatt har en sterk tiltrekningskraft som cruisedestinasjon, uansett årstid.
+
+18
+00:02:33,580 --> 00:02:38,960
+Rekordåret 2026 viser at byens popularitet bare fortsetter å vokse.
+
+19
+00:02:39,740 --> 00:02:42,580
+Laks er en av Norges mest kjente naturressurser.
+
+20
+00:02:43,440 --> 00:02:47,980
+Hvert år kommer tusenvis av sportsfiskere til norske elver for å fiske laks.
+
+21
+00:02:49,080 --> 00:02:54,760
+Men i år har Miljødirektoratet bestemt seg for å stramme inn reglene for laksefiske i Midt-Norge.
+
+22
+00:02:55,820 --> 00:03:01,320
+Fra 1. august vil flere elver i Trøndelag og på Nordmøre bli stengt for laksefiske.
+
+23
+00:03:02,060 --> 00:03:04,800
+Årsaken er at det er for lite laks i elvene.
+
+24
+00:03:05,800 --> 00:03:10,180
+Ifølge Miljødirektoratet har laksebestanden i Midt-Norge gått kraftig ned de siste årene.
+
+25
+00:03:11,360 --> 00:03:13,000
+Det er flere grunner til dette.
+
+26
+00:03:13,940 --> 00:03:18,280
+Klimaendringer fører til varmere vann i elvene, noe som er dårlig for laksen.
+
+27
+00:03:19,060 --> 00:03:24,880
+I tillegg har oppdrettsnæringen skapt problemer med rømt oppdrettslaks som blander seg med villaksen.
+
+28
+00:03:25,820 --> 00:03:31,000
+Sykdommer og parasitter fra oppdrettsanleggene har også spredt seg til villaksen.
+
+29
+00:03:31,640 --> 00:03:38,320
+Alle disse faktorene har gjort at antallet villaks har sunket til et kritisk nivå i flere elver i Midt-Norge.
+
+30
+00:03:39,500 --> 00:03:46,100
+Beslutningen om å stenge laksefisket har skapt sterke reaksjoner blant lokalbefolkningen i Trøndelag og på Nordmøre.
+
+31
+00:03:47,020 --> 00:03:52,920
+Mange elveeiere og sportsfiskere er skuffet over at de mister muligheten til å fiske i elvene sine.
+
+32
+00:03:53,900 --> 00:03:59,500
+Laksefiske er ikke bare en hobby – det er også en viktig inntektskilde for mange lokalsamfunn.
+
+33
+00:04:00,380 --> 00:04:07,560
+Turister som kommer for å fiske laks, leier overnatting, handler i lokale butikker og spiser på lokale restauranter.
+
+34
+00:04:08,300 --> 00:04:12,740
+Når elvene stenges, mister disse samfunnene viktige turistkroner.
+
+35
+00:04:13,880 --> 00:04:20,500
+Noen mener også at det burde vært gjort mer for å redde laksen tidligere, slik at man kunne unngått en total stenging.
+
+36
+00:04:21,540 --> 00:04:25,420
+Mens situasjonen er alvorlig i Midt-Norge, ser det lysere ut i Vestland.
+
+37
+00:04:26,740 --> 00:04:32,860
+Miljødirektoratet opplyser at det foreløpig ikke er planer om restriksjoner på laksefiske i denne delen av landet.
+
+38
+00:04:33,660 --> 00:04:37,660
+Laksebestanden i Vestland er i bedre stand enn i Trøndelag og på Nordmøre.
+
+39
+00:04:38,380 --> 00:04:44,300
+Dette skyldes blant annet at elvene i Vestland har kaldere vann, noe som gir bedre levevilkår for laksen.
+
+40
+00:04:45,200 --> 00:04:55,560
+I tillegg er det færre oppdrettsanlegg i umiddelbar nærhet av lakseelvene i denne regionen, noe som reduserer risikoen for sykdomsspredning og rømming.
+
+41
+00:04:56,840 --> 00:05:00,860
+Miljødirektoratet understreker likevel at situasjonen kan endre seg raskt.
+
+42
+00:05:01,700 --> 00:05:08,120
+Dersom laksebestanden også skulle svikte i andre deler av landet, kan det bli aktuelt med restriksjoner også der.
+
+43
+00:05:09,020 --> 00:05:17,760
+Derfor oppfordrer direktoratet alle sportsfiskere til å følge med på den lokale fiskerapporten og respektere eventuelle nye regler.
+
+44
+00:05:18,500 --> 00:05:28,360
+Vern av villaksen er et felles ansvar, og alle må bidra for å sikre at fremtidige generasjoner også kan oppleve gleden ved å fiske laks i norske elver.
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  console.log('VTT cues loaded:', cues.length);
+  buildCueElements();
+  // Show first cue as indicator
+  if (cues.length > 0) {
+    const info = document.createElement('div');
+    info.style.cssText = 'font-size:0.75rem;color:#aaa;margin-bottom:8px;padding:0 14px;';
+    info.textContent = cues.length + ' avsnitt lastet';
+    textDisplay.insertBefore(info, textDisplay.firstChild);
+  }
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      // Scroll into view (commented: causes issues in WeChat browser)
+      // el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>
