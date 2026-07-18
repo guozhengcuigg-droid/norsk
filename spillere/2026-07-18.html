@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+    .player-card { position: relative; top: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="metadata"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"><p style="color:#888;font-size:0.85rem;">Laster tekst ...</p></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-07-18.mp3';
+const TITLE = 'Dagens nyheter – 18. juli 2026';
+const DATE_STR = '2026-07-18';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:03,620 --> 00:00:07,720
+Fredag kveld startet en stor brann i et rekkehus i Krokstadelva i Drammen.
+
+2
+00:00:08,520 --> 00:00:15,120
+Brannen spredte seg raskt fra hus til hus, og i løpet av noen timer ble over 100 boliger totalskadd.
+
+3
+00:00:15,960 --> 00:00:24,140
+Rundt 400 mennesker måtte evakuere fra hjemmene sine. Lørdag morgen meldte brannvesenet at brannen endelig var under kontroll.
+
+4
+00:00:25,100 --> 00:00:29,360
+Brannmannskaper fra hele regionen jobbet gjennom hele natten for å stoppe flammene.
+
+5
+00:00:29,900 --> 00:00:33,620
+De brukte også et brannhelikopter for å slippe vann over området.
+
+6
+00:00:34,280 --> 00:00:41,160
+Sterk vind gjorde slukningsarbeidet ekstra vanskelig, og flammene spredte seg fra hustak til hustak i stor fart.
+
+7
+00:00:42,220 --> 00:00:47,160
+Brannvesenet måtte også passe på at brannen ikke spredte seg til en nærliggende skole og et sykehjem.
+
+8
+00:00:48,100 --> 00:00:52,900
+Mange naboer og frivillige hjalp til med å evakuere mennesker og dyr fra området.
+
+9
+00:00:53,580 --> 00:00:58,560
+En nabo forteller at hun så flammer på himmelen allerede mens brannen var flere hundre meter unna.
+
+10
+00:00:59,460 --> 00:01:05,600
+Kommunen åpnet et evakueringssenter på en lokal skole for de som ikke hadde noe annet sted å dra.
+
+11
+00:01:06,680 --> 00:01:10,760
+Det utrolige er at ingen mennesker ble alvorlig skadd i brannen.
+
+12
+00:01:11,360 --> 00:01:15,900
+Flere personer fikk behandling for lettere røykskader, men alle er i god behold.
+
+13
+00:01:16,460 --> 00:01:24,900
+Blant dem som mistet hjemmet sitt, er brannsjef Torgeir Andersen selv. Han ledet slukningsarbeidet samtidig som hans eget hus brant ned.
+
+14
+00:01:25,540 --> 00:01:33,880
+I en pressemelding sa han: "Vårt viktigste fokus nå er å gjøre alt vi kan for å hindre at denne katastrofen blir enda større.
+
+15
+00:01:34,640 --> 00:01:43,140
+Nå må vi slå ring om hverandre, vise omsorg, og stå sammen som lokalsamfunn."
+
+Kong Harald reagerte raskt på nyheten om storbrannen.
+
+16
+00:01:43,960 --> 00:01:52,280
+Han sendte et brev til Drammens ordfører Kjell Arne Hermansen der han skrev: "Det har vært forferdelig å følge den voldsomme brannen.
+
+17
+00:01:52,920 --> 00:02:03,640
+Familien min og jeg føler med alle som har mistet hjemmene sine." Kronprins Haakon skal besøke Krokstadelva søndag for å møte nødetatene og de som er rammet av brannen.
+
+18
+00:02:04,940 --> 00:02:12,740
+Statsministeren har også uttrykt sin medfølelse og lovet at regjeringen vil bidra med nødvendige ressurser til gjenoppbyggingen.
+
+19
+00:02:13,360 --> 00:02:18,420
+Politiet og brannvesenet har startet etterforskning for å finne ut hvordan brannen startet.
+
+20
+00:02:19,740 --> 00:02:21,620
+Foreløpig er brannårsaken ukjent.
+
+21
+00:02:22,340 --> 00:02:27,920
+Politiet har gjennomført flere vitneavhør, men ingen har så langt kunnet si nøyaktig hvor brannen begynte.
+
+22
+00:02:30,160 --> 00:02:34,500
+Etterforskerne skal nå bruke droner og spesialutstyr for å kartlegge brannforløpet.
+
+23
+00:02:35,180 --> 00:02:40,280
+Det er for tidlig å si om brannen var et uhell eller om den ble påsatt med vilje.
+
+24
+00:02:41,040 --> 00:02:47,580
+Drammen kommune har lovet å gi god hjelp og støtte til alle familiene som har mistet alt de eier.
+
+25
+00:02:48,220 --> 00:02:58,880
+Ordfører Kjell Arne Hermansen sa på en pressekonferanse lørdag ettermiddag at kommunen stiller med kriseteam, midlertidige boliger og økonomisk støtte til de rammede.
+
+26
+00:02:59,560 --> 00:03:02,440
+Han oppfordret også folk fra hele landet til å bidra.
+
+27
+00:03:03,120 --> 00:03:11,600
+Mange lokale organisasjoner og privatpersoner har allerede begynt å samle inn klær, mat og penger til de rammede.
+
+28
+00:03:12,200 --> 00:03:17,860
+En innsamlingsaksjon på nettet hadde allerede lørdag formiddag samlet inn over to millioner kroner.
+
+29
+00:03:18,540 --> 00:03:21,140
+Det er spennende tider for fotballfansen i Bergen.
+
+30
+00:03:22,140 --> 00:03:27,980
+Sportsklubben Brann har fått bekreftet hvem de skal møte i 2. kvalifiseringsrunde til UEFA Conference League.
+
+31
+00:03:28,740 --> 00:03:31,940
+Motstanderen er FC Universitatea Cluj fra Romania.
+
+32
+00:03:32,740 --> 00:03:37,440
+Dette er en stor mulighet for Brann til å spille seg videre i en europeisk turnering.
+
+33
+00:03:38,240 --> 00:03:40,600
+Den første kampen spilles borte torsdag 23.
+
+34
+00:03:41,600 --> 00:03:44,780
+Men det er viktig å merke seg at kampen ikke spilles i Cluj.
+
+35
+00:03:46,780 --> 00:03:52,580
+FC Universitatea Cluj bruker Sepsi OSK Arena i byen Sfântu Gheorghe som hjemmebane for denne kampen.
+
+36
+00:03:53,660 --> 00:03:57,900
+Denne byen ligger omtrent fire timer med bil sør for Cluj, i det sentrale Romania.
+
+37
+00:03:58,680 --> 00:04:05,220
+For Brann-supportere som vil reise, er det derfor enklere å fly til Bucuresti og ta tog eller bil derfra.
+
+38
+00:04:05,960 --> 00:04:13,440
+Klubben oppfordrer supporterne til å sjekke reiseråd og bestille billetter tidlig, siden arenaen har begrenset kapasitet.
+
+39
+00:04:14,580 --> 00:04:20,040
+Kampen starter klokken 20.00 lokal tid, som er klokken 19.00 norsk tid.
+
+40
+00:04:20,780 --> 00:04:25,680
+Den andre kampen, som er hjemmekampen, spilles på Brann Stadion i Bergen torsdag 30.
+
+41
+00:04:26,640 --> 00:04:29,120
+Brann ønsker å starte kampen klokken 19.00.
+
+42
+00:04:30,260 --> 00:04:42,900
+Dette må fortsatt bekreftes endelig, men alt tyder på at det blir dette tidspunktet. Dette blir en stor kveld på Stadion, og mange supportere gleder seg allerede til å skape en fantastisk stemning.
+
+43
+00:04:43,900 --> 00:04:46,740
+Brann har allerede begynt å sende ut billettinformasjon.
+
+44
+00:04:47,760 --> 00:04:54,740
+Partoutkortholdere har forkjøpsrett på sine vanlige plasser, og fristen for å reservere er mandag 20. juli klokken 12.00.
+
+45
+00:04:56,560 --> 00:04:59,380
+Også medlemmer i Sportsklubben Brann kan kjøpe billetter samtidig.
+
+46
+00:05:00,040 --> 00:05:06,060
+Billettene koster 350 kroner for voksne og 200 kroner for barn og honnør på langsidene.
+
+47
+00:05:07,460 --> 00:05:12,420
+På kortsidene koster det 250 kroner for voksne og 100 kroner for barn og honnør.
+
+48
+00:05:13,260 --> 00:05:15,760
+Det åpne billettsalget starter tirsdag 21.
+
+49
+00:05:16,180 --> 00:05:20,920
+Denne europacupdeltakelsen kommer i en travel periode for Brann.
+
+50
+00:05:21,540 --> 00:05:26,640
+Laget spiller også hjemmekamper i Eliteserien mot både Vålerenga og Rosenborg i samme periode.
+
+51
+00:05:28,160 --> 00:05:31,880
+Brann spiller dessuten borte mot Molde i dag, lørdag 18.
+
+52
+00:05:33,120 --> 00:05:42,380
+Det blir en spennende sommer for alle som følger Brann, og forhåpentligvis kan laget gi supporterne mange gode opplevelser både hjemme og ute i Europa.
+
+53
+00:05:43,640 --> 00:05:49,300
+Trener Eirik Horneland sier til klubbens nettsider at laget er godt forberedt til den tøffe kamp-perioden.
+
+54
+00:05:50,380 --> 00:05:56,700
+Han mener at spillerne er i god form og at bredden i troppen gjør at de kan håndtere mange kamper på kort tid.
+
+55
+00:05:57,340 --> 00:06:03,240
+Brann har ikke spilt i Europa siden 2008, så dette er en historisk mulighet for klubben.
+
+56
+00:06:04,220 --> 00:06:10,220
+Sist Brann var i en europeisk turnering, spilte de mot Deportivo La Coruña fra Spania.
+
+57
+00:06:10,980 --> 00:06:13,540
+Nå, atten år senere, er sjansen her igjen.
+
+58
+00:06:14,320 --> 00:06:21,560
+Supporterne håper at laget kan gjenskape noe av magien fra gamle dager, da Brann var et kjent navn i europeisk fotball.
+
+59
+00:06:22,400 --> 00:06:26,700
+Både hjemme og borte venter det spennende fotballkvelder i ukene som kommer.
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  console.log('VTT cues loaded:', cues.length);
+  buildCueElements();
+  // Show first cue as indicator
+  if (cues.length > 0) {
+    const info = document.createElement('div');
+    info.style.cssText = 'font-size:0.75rem;color:#aaa;margin-bottom:8px;padding:0 14px;';
+    info.textContent = cues.length + ' avsnitt lastet';
+    textDisplay.insertBefore(info, textDisplay.firstChild);
+  }
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      // Scroll into view (commented: causes issues in WeChat browser)
+      // el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>
