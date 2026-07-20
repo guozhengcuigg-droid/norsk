@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+    .player-card { position: relative; top: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="metadata"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"><p style="color:#888;font-size:0.85rem;">Laster tekst ...</p></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-07-20.mp3';
+const TITLE = 'Dagens nyheter – 20. juli 2026';
+const DATE_STR = '2026-07-20';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:00,100 --> 00:00:01,962
+God mandag!
+
+2
+00:00:01,912 --> 00:00:07,050
+I dag har vi to viktige saker som begge har stor betydning, men på helt forskjellige måter.
+
+3
+00:00:07,050 --> 00:00:15,375
+Den første er en stor internasjonal nyhet: Iran har erklært full krig mot USA, og situasjonen i Midtøsten blir stadig mer alvorlig og farlig.
+
+4
+00:00:15,375 --> 00:00:22,862
+Den andre saken er en lokal miljønyhet fra Vestlandet, der en stor mengde bensin har lekket ut i sjøen ved Austevoll sør for Bergen.
+
+5
+00:00:22,862 --> 00:00:27,837
+Begge sakene viser hvor sårbar verden kan være, enten det gjelder krig eller natur.
+
+6
+00:00:27,837 --> 00:00:30,100
+La oss lese videre!
+
+7
+00:00:30,100 --> 00:00:35,725
+Mandag 20. juli erklærte Iran det de kaller en «fullskala krig» mot USA.
+
+8
+00:00:35,725 --> 00:00:44,462
+Dette markerer en dramatisk opptrapping av konflikten som har pågått mellom de to landene siden USA og Israel startet militære angrep mot Iran i februar i år.
+
+9
+00:00:44,462 --> 00:00:50,487
+Ifølge iranske myndigheter er dette et direkte svar på de siste amerikanske luftangrepene mot iranske mål.
+
+10
+00:00:50,487 --> 00:00:58,250
+Uttalelsen kom gjennom statlige iranske medier og representerer den hardeste retorikken fra Teheran siden konflikten begynte for fem måneder siden.
+
+11
+00:00:58,250 --> 00:01:02,837
+Mange eksperter beskriver denne erklæringen som et vendepunkt i konflikten.
+
+12
+00:01:02,837 --> 00:01:07,375
+USA gjennomførte i helgen en ny runde med luftangrep mot iranske mål.
+
+13
+00:01:07,375 --> 00:01:13,875
+Det amerikanske forsvarsdepartementet bekreftet samtidig at enda en amerikansk soldat har mistet livet i konflikten.
+
+14
+00:01:13,875 --> 00:01:19,212
+Dette bringer det totale antallet drepte amerikanske soldater opp siden operasjonene startet.
+
+15
+00:01:19,212 --> 00:01:30,350
+Amerikanske talspersoner sier at angrepene er rettet mot iranske militære installasjoner og våpenlagre, og at målet er å svekke Irans evne til å true amerikanske interesser og allierte i regionen.
+
+16
+00:01:30,350 --> 00:01:35,100
+Presidenten har uttalt at USA ikke vil stoppe før Iran trekker seg tilbake.
+
+17
+00:01:35,100 --> 00:01:39,162
+Iran har på sin side svart med å angripe mål i Golfstatene.
+
+18
+00:01:39,162 --> 00:01:46,700
+Ifølge rapporter har iransk-støttede styrker rettet angrep mot amerikanske baser og allierte mål i flere land rundt Persiabukta.
+
+19
+00:01:46,700 --> 00:01:53,225
+Dette har skapt stor bekymring blant de arabiske gulfstatene, som befinner seg midt mellom to mektige fiender.
+
+20
+00:01:53,225 --> 00:01:59,762
+Faren for at konflikten sprer seg til nabolandene blir vurdert som svært høy av internasjonale eksperter og diplomater.
+
+21
+00:01:59,762 --> 00:02:04,912
+Konflikten har også store økonomiske konsekvenser, spesielt for oljeprisen.
+
+22
+00:02:04,912 --> 00:02:14,525
+Prisen på bensin i USA har steget til et gjennomsnitt på fire dollar per gallon, og eksperter frykter at prisene kan stige ytterligere hvis situasjonen i Hormuz-stredet forverres.
+
+23
+00:02:14,525 --> 00:02:21,362
+Hormuz-stredet er en smal passasje mellom Iran og Oman der omtrent en femtedel av verdens olje fraktes gjennom hver dag.
+
+24
+00:02:21,362 --> 00:02:27,150
+Hvis denne ruten blir blokkert, vil det få dramatiske konsekvenser for hele verdensøkonomien.
+
+25
+00:02:27,150 --> 00:02:32,775
+For Norge, som er medlem av NATO, er denne konflikten spesielt viktig å følge med på.
+
+26
+00:02:32,775 --> 00:02:40,812
+Selv om Norge ligger langt fra Midtøsten geografisk, er landet forpliktet gjennom NATO-samarbeidet til å støtte allierte i en krisesituasjon.
+
+27
+00:02:40,812 --> 00:02:47,712
+I tillegg er Norge en stor olje- og gassprodusent, og høye energipriser påvirker norsk økonomi direkte.
+
+28
+00:02:47,712 --> 00:02:56,862
+Norske myndigheter følger situasjonen nøye, men har foreløpig ikke kommentert konflikten offentlig utover å uttrykke bekymring for den humanitære situasjonen i regionen.
+
+29
+00:02:56,862 --> 00:03:01,625
+Det internasjonale samfunnet har reagert med sterk bekymring på krigserklæringen.
+
+30
+00:03:01,625 --> 00:03:07,012
+FN har bedt begge parter om å stanse fiendtlighetene umiddelbart og sette seg ved forhandlingsbordet.
+
+31
+00:03:07,012 --> 00:03:11,262
+Flere europeiske ledere har også kommet med lignende oppfordringer.
+
+32
+00:03:11,262 --> 00:03:21,262
+Eksperter på internasjonal politikk mener at en full krig mellom USA og Iran vil få konsekvenser som strekker seg langt utover Midtøsten og vil påvirke sikkerhetssituasjonen i hele verden.
+
+33
+00:03:21,262 --> 00:03:25,937
+En alvorlig miljøhendelse har funnet sted i Austevoll kommune sør for Bergen.
+
+34
+00:03:25,937 --> 00:03:32,350
+Mandag formiddag bekreftet politiet og brannvesenet at omtrent 7500 liter bensin har rent ut i sjøen.
+
+35
+00:03:32,350 --> 00:03:37,800
+Hendelsen ble oppdaget tidlig om morgenen, og nødetatene rykket umiddelbart ut til stedet.
+
+36
+00:03:37,800 --> 00:03:44,637
+Det er foreløpig uklart nøyaktig hvordan utslippet skjedde, men politiet mistenker at det kan være snakk om uaktsomhet.
+
+37
+00:03:44,637 --> 00:03:50,225
+De gjennomfører nå avhør og tekniske undersøkelser på stedet for å finne årsaken til lekkasjen.
+
+38
+00:03:50,225 --> 00:03:55,925
+Austevoll er en øykommune som ligger sør for Bergen, med rundt 5300 innbyggere.
+
+39
+00:03:55,925 --> 00:03:57,662
+Kommunen er
+
+40
+00:03:57,772 --> 00:04:05,697
+mest kjent for sin store fiskeoppdrettsnæring, og flere av Norges største lakseoppdrettsselskaper har hovedkontor eller anlegg i området.
+
+41
+00:04:05,647 --> 00:04:12,684
+Dette gjør bensinutslippet spesielt alvorlig, fordi forurensning i sjøen kan skade både villfisk og oppdrettsfisk.
+
+42
+00:04:12,684 --> 00:04:20,759
+Lokale fiskere og oppdrettere har uttrykt stor bekymring for situasjonen og venter på informasjon om hvor stor skade utslippet kan ha forårsaket.
+
+43
+00:04:20,759 --> 00:04:24,459
+Bensin er en svært skadelig væske for marint liv.
+
+44
+00:04:24,459 --> 00:04:31,184
+Når bensin blander seg med sjøvann, danner den en tynn hinne på overflaten som hindrer oksygen i å trenge ned i vannet.
+
+45
+00:04:31,184 --> 00:04:35,309
+Dette kan føre til at fisk og andre sjødyr dør av oksygenmangel.
+
+46
+00:04:35,309 --> 00:04:41,072
+I tillegg inneholder bensin mange giftige kjemikalier som kan hope seg opp i næringskjeden over tid.
+
+47
+00:04:41,072 --> 00:04:49,959
+Miljøeksperter sier at selv om 7500 liter ikke er det største utslippet man har sett, kan konsekvensene likevel være alvorlige i et sårbart kystområde.
+
+48
+00:04:49,959 --> 00:04:55,772
+Brannvesenet og Kystverket har satt inn lenser og annet utstyr for å begrense spredningen av bensinen.
+
+49
+00:04:55,772 --> 00:05:01,334
+Lenser er flytende barrierer som legges på vannoverflaten for å samle opp olje og kjemikalier.
+
+50
+00:05:01,334 --> 00:05:08,447
+Ifølge brannvesenet har de klart å få kontroll over situasjonen, men opprydningsarbeidet vil trolig fortsette i flere dager.
+
+51
+00:05:08,447 --> 00:05:16,772
+De ber publikum om å holde seg unna området mens opprydningen pågår, og båteiere i nærheten bes følge med på eventuelle skader på båtene sine.
+
+52
+00:05:16,772 --> 00:05:22,447
+Hendelsen har ført til ny debatt om sikkerheten rundt lagring og transport av drivstoff langs norskekysten.
+
+53
+00:05:22,447 --> 00:05:32,709
+Lokale politikere i Austevoll krever nå en gjennomgang av rutinene for bensinhåndtering i kommunen, og miljøorganisasjoner peker på at det er behov for strengere regler og bedre beredskap.
+
+54
+00:05:32,709 --> 00:05:38,684
+Vi må lære av slike hendelser og sørge for at de ikke skjer igjen, sier en talsperson for en lokal miljøgruppe.
+
+55
+00:05:38,684 --> 00:05:43,809
+Politiet sier at de vil vurdere om det skal opprettes straffesak når undersøkelsene er ferdige.
+
+56
+00:05:43,809 --> 00:05:51,572
+Mandag ettermiddag meldte Kystverket at de ville sende et spesialfartøy med avansert oppsamlingsutstyr til Austevoll for å hjelpe til med opprydningen.
+
+57
+00:05:51,572 --> 00:05:55,934
+I mellomtiden jobber brannvesenet på spreng for å minimere miljøskadene.
+
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  console.log('VTT cues loaded:', cues.length);
+  buildCueElements();
+  // Show first cue as indicator
+  if (cues.length > 0) {
+    const info = document.createElement('div');
+    info.style.cssText = 'font-size:0.75rem;color:#aaa;margin-bottom:8px;padding:0 14px;';
+    info.textContent = cues.length + ' avsnitt lastet';
+    textDisplay.insertBefore(info, textDisplay.firstChild);
+  }
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      // Scroll into view (commented: causes issues in WeChat browser)
+      // el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>
