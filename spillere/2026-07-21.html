@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+    .player-card { position: relative; top: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="metadata"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"><p style="color:#888;font-size:0.85rem;">Laster tekst ...</p></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-07-21.mp3';
+const TITLE = 'Dagens nyheter – 21. juli 2026';
+const DATE_STR = '2026-07-21';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:00,100 --> 00:00:02,025
+God tirsdag!
+
+2
+00:00:01,975 --> 00:00:05,587
+I dag skal vi se på to spennende hendelser fra Vestlandet.
+
+3
+00:00:05,587 --> 00:00:12,275
+Først skal vi til Bergen sentrum, der en stor vannlekkasje har skapt store problemer for både bedrifter og beboere.
+
+4
+00:00:12,275 --> 00:00:18,337
+Deretter reiser vi til Aurlandsfjorden, der en gruppe kajakkpadlere fikk en utfordrende opplevelse på sjøen.
+
+5
+00:00:18,337 --> 00:00:20,362
+La oss komme i gang!
+
+6
+00:00:20,362 --> 00:00:25,937
+Tirsdag formiddag oppdaget man en alvorlig vannlekkasje i et bygg på Strandkaien i Bergen sentrum.
+
+7
+00:00:25,937 --> 00:00:31,325
+Strandkaien ligger helt nede ved sjøen, like ved det berømte Fisketorget og Bryggen.
+
+8
+00:00:31,325 --> 00:00:38,675
+Området er et av de mest besøkte stedene i Bergen, med mange restauranter, butikker og kontorer i de gamle trebygningene.
+
+9
+00:00:38,675 --> 00:00:43,662
+Lekkasjen var så omfattende at store mengder vann rant ned gjennom flere etasjer i bygget.
+
+10
+00:00:43,662 --> 00:00:47,650
+Både næringslokaler og boliger ble berørt av vannskadene.
+
+11
+00:00:47,650 --> 00:00:52,112
+Brannvesenet rykket raskt ut til stedet for å få kontroll over situasjonen.
+
+12
+00:00:52,112 --> 00:00:58,887
+De jobbet i flere timer med å stanse vannet og begrense skadene, mens nysgjerrige forbipasserende samlet seg utenfor.
+
+13
+00:00:58,887 --> 00:01:03,587
+En restaurant som holder til i første etasje av bygget måtte umiddelbart stenge dørene.
+
+14
+00:01:03,587 --> 00:01:07,600
+Restauranten fikk vannskader i både kjøkkenet og spiseområdet.
+
+15
+00:01:07,600 --> 00:01:13,187
+Ifølge eieren vil det ta flere dager, kanskje uker, før restauranten kan åpne igjen.
+
+16
+00:01:13,187 --> 00:01:19,587
+Det er et stort økonomisk tap for bedriften, særlig midt i sommerturistsesongen når Bergen er full av besøkende.
+
+17
+00:01:19,587 --> 00:01:25,937
+Mange turister som hadde planlagt å spise der, måtte finne andre alternativer i området rundt Fisketorget.
+
+18
+00:01:25,937 --> 00:01:32,450
+De ansatte ved restauranten blir også berørt, da de nå mister arbeidstimer mens restauranten er stengt for reparasjon.
+
+19
+00:01:32,450 --> 00:01:37,087
+Også beboere i leilighetene i de øvre etasjene ble rammet av vannlekkasjen.
+
+20
+00:01:37,087 --> 00:01:42,562
+Vannet hadde trengt gjennom gulv og vegger, og flere leiligheter fikk betydelige skader.
+
+21
+00:01:42,562 --> 00:01:48,262
+Beboerne måtte evakuere midlertidig mens brannvesenet og rørleggere jobbet med å reparere skadene.
+
+22
+00:01:48,262 --> 00:01:51,775
+Kommunen har tilbudt midlertidig bolig til de som trenger det.
+
+23
+00:01:51,775 --> 00:01:57,662
+Forsikringsselskapene er også koblet inn for å vurdere skadeomfanget og hva det vil koste å utbedre.
+
+24
+00:01:57,662 --> 00:02:05,275
+Årsaken til vannlekkasjen er foreløpig ikke bekreftet, men ifølge tekniske eksperter kan det skyldes et brudd i et vannrør inne i bygget.
+
+25
+00:02:05,275 --> 00:02:09,262
+Gamle rør i eldre bygårder i Bergen er et kjent problem.
+
+26
+00:02:09,262 --> 00:02:15,500
+Mange av bygningene ved Strandkaien og Bryggen er flere hundre år gamle, og rørsystemene kan være sårbare.
+
+27
+00:02:15,500 --> 00:02:22,725
+Spesielt om vinteren kan kulde og frost føre til at gamle rør sprekker, men også om sommeren kan trykkendringer skape problemer.
+
+28
+00:02:22,725 --> 00:02:28,837
+Kommunen oppfordrer gårdeiere i sentrum til å sjekke rørene sine jevnlig for å unngå lignende hendelser i fremtiden.
+
+29
+00:02:28,837 --> 00:02:33,787
+Dette er ikke første gang Bergen opplever store vannskader i sentrumsbebyggelsen.
+
+30
+00:02:33,787 --> 00:02:38,787
+Tidligere i år har det vært flere mindre lekkasjer i området rundt Bryggen og Nordnes.
+
+31
+00:02:38,787 --> 00:02:46,375
+Eksperter peker på at kombinasjonen av gammel bygningsmasse, mye nedbør og eldre infrastruktur gjør Bergen spesielt utsatt.
+
+32
+00:02:46,375 --> 00:02:55,037
+Byrådet i Bergen har tidligere sagt at de vil prioritere oppgradering av vann- og avløpsnettet i sentrum, men slike prosjekter tar tid og er svært kostbare.
+
+33
+00:02:55,037 --> 00:03:03,900
+Byen er en del av UNESCOs verdensarvliste, noe som gjør at oppgraderinger må gjennomføres med stor forsiktighet for å bevare den historiske bygningsmassen.
+
+34
+00:03:03,900 --> 00:03:09,437
+Mandag ettermiddag rykket nødetatene ut til Aurlandsfjorden etter melding om kajakkpadlere i fare.
+
+35
+00:03:09,437 --> 00:03:16,600
+En gruppe på elleve personer, inkludert en guide, var ute på en organisert kajakktur da været plutselig ble dårligere.
+
+36
+00:03:16,600 --> 00:03:20,875
+Store bølger gjorde det vanskelig for padlerne å komme seg trygt til land.
+
+37
+00:03:20,875 --> 00:03:26,987
+Gruppa befant seg ved Fresvik, innerst i Aurlandsfjorden, som er en arm av den store Sognefjorden.
+
+38
+00:03:26,987 --> 00:03:34,800
+Sognefjorden er Norges lengste og dypeste fjord, og Aurlandsfjorden er en av de mest besøkte delene av dette fantastiske naturområdet.
+
+39
+00:03:34,800 --> 00:03:42,100
+Om sommeren kommer turister fra hele verden for å padle kajakk og oppleve den spektakulære naturen med høye fjell og krystallklart vann.
+
+40
+00:03:42,100 --> 00:03:46,562
+Da gruppa skjønte at de var i trøbbel, kontaktet guiden nødetatene.
+
+41
+00:03:46,562 --> 00:03:51,800
+Politiet i Vest politidistrikt mottok nødmeldingen og koordinerte redningsaksjonen.
+
+42
+00:03:51,800 --> 00:03:55,825
+Et redningshelikopter ble sendt til stedet, samtidig som
+
+43
+00:03:55,924 --> 00:03:59,636
+politiet kontaktet båter i nærheten av Sognefjorden.
+
+44
+00:03:59,586 --> 00:04:04,274
+Flere lokale båter stilte seg til disposisjon og kom raskt til unnsetning.
+
+45
+00:04:04,274 --> 00:04:09,899
+Politipatruljen fra det lokale lensmannskontoret kjørte også til Fresvik for å bistå fra land.
+
+46
+00:04:09,899 --> 00:04:12,774
+Redningsaksjonen gikk heldigvis bra.
+
+47
+00:04:12,774 --> 00:04:17,161
+Alle de elleve personene i kajakkgruppa kom seg trygt i land etter en stund.
+
+48
+00:04:17,161 --> 00:04:23,449
+Ingen av padlerne hadde behov for medisinsk hjelp, selv om flere var kalde og slitne etter den krevende opplevelsen.
+
+49
+00:04:23,449 --> 00:04:28,874
+Politiet opplyste at de ville følge opp med en samtale med guiden for å kartlegge hendelsesforløpet.
+
+50
+00:04:28,874 --> 00:04:33,661
+Det er foreløpig ikke klart om værmeldingen ble sjekket grundig nok før turen startet.
+
+51
+00:04:33,661 --> 00:04:40,286
+Eksperter understreker at værforholdene i fjordene kan endre seg raskt, selv på sommerdager som starter stille og fint.
+
+52
+00:04:40,286 --> 00:04:46,774
+Aurlandsfjorden er omgitt av høye fjell, og vind kan plutselig komme ned fra fjellsidene og skape farlige bølger.
+
+53
+00:04:46,774 --> 00:04:55,674
+Friluftsorganisasjoner anbefaler at alle som skal på kajakktur på fjorden sjekker værmeldingen nøye, har med seg riktig sikkerhetsutstyr og aldri padler alene.
+
+54
+00:04:55,674 --> 00:04:59,736
+Det er også viktig å ha en plan for hva man gjør dersom været endrer seg.
+
+55
+00:04:59,736 --> 00:05:05,749
+Heldigvis endte denne hendelsen godt, og den viser hvor effektivt det norske redningssystemet fungerer.
+
+56
+00:05:05,749 --> 00:05:12,274
+Kombinasjonen av redningshelikopter, lokale båter og politi på land gjorde at alle kom seg i sikkerhet.
+
+57
+00:05:12,274 --> 00:05:19,486
+Redningsselskapet har i sommer hatt et høyt antall oppdrag langs Vestlandskysten, mye på grunn av det populære friluftslivet.
+
+58
+00:05:19,486 --> 00:05:25,011
+De oppfordrer folk til å nyte naturen, men samtidig ta alle nødvendige forholdsregler.
+
+59
+00:05:25,011 --> 00:05:32,199
+Sikkerhet må alltid komme først, og denne hendelsen minner oss om at naturen kan være uforutsigbar selv på fine sommerdager.
+
+60
+00:05:32,199 --> 00:05:41,624
+Aurlandsfjorden er for øvrig en del av Nærøyfjorden verdensarvområde, og tiltrekker seg tusenvis av besøkende hver sommer for å oppleve den spektakulære naturen på nært hold.
+
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  console.log('VTT cues loaded:', cues.length);
+  buildCueElements();
+  // Show first cue as indicator
+  if (cues.length > 0) {
+    const info = document.createElement('div');
+    info.style.cssText = 'font-size:0.75rem;color:#aaa;margin-bottom:8px;padding:0 14px;';
+    info.textContent = cues.length + ' avsnitt lastet';
+    textDisplay.insertBefore(info, textDisplay.firstChild);
+  }
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      // Scroll into view (commented: causes issues in WeChat browser)
+      // el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>
