@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+    .player-card { position: relative; top: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="metadata"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"><p style="color:#888;font-size:0.85rem;">Laster tekst ...</p></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-07-22.mp3';
+const TITLE = 'Dagens nyheter – 22. juli 2026';
+const DATE_STR = '2026-07-22';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:00,100 --> 00:00:04,675
+I dag er det 15 år siden det verste terrorangrepet i Norge i fredstid.
+
+2
+00:00:04,625 --> 00:00:09,875
+Den 22. juli 2011 eksploderte en bombe i regjeringskvartalet i Oslo.
+
+3
+00:00:09,875 --> 00:00:12,450
+Åtte mennesker mistet livet.
+
+4
+00:00:12,450 --> 00:00:17,462
+Senere samme dag angrep terroristen en sommerleir for unge politikere på Utøya.
+
+5
+00:00:17,462 --> 00:00:21,375
+Der ble 69 mennesker drept, de fleste av dem ungdommer.
+
+6
+00:00:21,375 --> 00:00:24,500
+Til sammen døde 77 mennesker den dagen.
+
+7
+00:00:24,500 --> 00:00:29,100
+Mange av ofrene var bare tenåringer som var engasjert i politikk og samfunn.
+
+8
+00:00:29,100 --> 00:00:32,862
+I dag samles folk over hele landet for å minnes ofrene.
+
+9
+00:00:32,862 --> 00:00:36,812
+I Bergen stod hundrevis av mennesker sammen i en minnemarkering.
+
+10
+00:00:36,812 --> 00:00:41,137
+BT skriver at det var «et hav av mennesker» som møtte opp.
+
+11
+00:00:41,137 --> 00:00:43,650
+Mange holdt lys og blomster.
+
+12
+00:00:43,650 --> 00:00:48,000
+Slike markeringer er viktige for å vise at vi ikke glemmer det som skjedde.
+
+13
+00:00:48,000 --> 00:00:51,487
+De viser også at Norge står sammen mot hat og vold.
+
+14
+00:00:51,487 --> 00:00:56,850
+Statsministeren og andre toppolitikere deltok i den offisielle seremonien i Oslo.
+
+15
+00:00:56,850 --> 00:01:01,337
+Flere overlevende fra Utøya har delt sine historier i media i dag.
+
+16
+00:01:01,337 --> 00:01:07,300
+Ruben, som overlevde angrepet, sier til NRK: «Vi har lært alt for lite.»
+
+17
+00:01:07,300 --> 00:01:12,312
+Han mener at samfunnet fortsatt har mye arbeid å gjøre for å bekjempe rasisme og hat.
+
+18
+00:01:12,312 --> 00:01:18,512
+En mor som mistet datteren sin på Utøya, krever mer handling mot økende rasisme i dagens Norge.
+
+19
+00:01:18,512 --> 00:01:22,212
+Hun sier at ord ikke er nok – vi må se konkrete tiltak.
+
+20
+00:01:22,212 --> 00:01:25,275
+Samtidig kommer det en bekymringsfull rapport.
+
+21
+00:01:25,275 --> 00:01:30,500
+Bergensavisen skriver at flere unge mennesker lar seg inspirere av terroristen Breivik.
+
+22
+00:01:30,500 --> 00:01:33,762
+Eksperter sier at dette er skremmende og trist.
+
+23
+00:01:33,762 --> 00:01:38,262
+Politiet og andre myndigheter følger nøye med på høyreekstreme miljøer.
+
+24
+00:01:38,262 --> 00:01:41,662
+De jobber hele tiden for å forhindre nye angrep.
+
+25
+00:01:41,662 --> 00:01:47,262
+Men utfordringen er at radikalisering ofte skjer på internett, der det er vanskelig å oppdage.
+
+26
+00:01:47,262 --> 00:01:51,850
+Dagen i dag handler først og fremst om å huske ofrene og støtte de etterlatte.
+
+27
+00:01:51,850 --> 00:01:56,737
+Mange nordmenn tenker på spørsmålet: Hvordan kan vi skape et tryggere samfunn for alle?
+
+28
+00:01:56,737 --> 00:02:01,525
+Svaret er ikke enkelt, men markeringer som dagens viser at folk bryr seg.
+
+29
+00:02:01,525 --> 00:02:04,962
+Norge har forandret seg mye på disse 15 årene.
+
+30
+00:02:04,962 --> 00:02:11,337
+Landet har blitt et mer mangfoldig samfunn, og debatten om inkludering og toleranse er viktigere enn noen gang.
+
+31
+00:02:11,337 --> 00:02:16,912
+Mange av de overlevende fra Utøya er i dag voksne mennesker med egne familier og karrierer.
+
+32
+00:02:16,912 --> 00:02:21,337
+Noen av dem har gått inn i politikken for å jobbe for de verdiene de tror på.
+
+33
+00:02:21,337 --> 00:02:25,512
+Andre har skrevet bøker eller holder foredrag om sine opplevelser.
+
+34
+00:02:25,512 --> 00:02:30,537
+De ønsker å fortelle historiene sine slik at nye generasjoner kan lære av det som skjedde.
+
+35
+00:02:30,537 --> 00:02:39,412
+Det er viktig for dem at 22. juli ikke bare blir en dato i historiebøkene, men en påminnelse om hva hat kan føre til og hvorfor vi må stå opp mot det hver eneste dag.
+
+36
+00:02:39,412 --> 00:02:43,375
+Politiet i Bergen har siktet to personer for barnebortføring.
+
+37
+00:02:43,375 --> 00:02:46,962
+En mann og en kvinne ble pågrepet tirsdag 21.
+
+38
+00:02:46,962 --> 00:02:52,350
+De er siktet for omsorgsunndragelse, som betyr at de ulovlig har tatt med seg et barn.
+
+39
+00:02:52,350 --> 00:02:57,900
+Ifølge politiadvokat Celin Hauge Andersen dreier det seg om bortføring av et barn til utlandet.
+
+40
+00:02:57,900 --> 00:03:02,200
+Saken er svært alvorlig, og politiet etterforsker den grundig.
+
+41
+00:03:02,200 --> 00:03:06,850
+Advokat Per Magne Kristiansen representerer kvinnen som er siktet i saken.
+
+42
+00:03:06,850 --> 00:03:10,662
+Hun ble pågrepet tirsdag og har sittet i varetekt siden da.
+
+43
+00:03:10,662 --> 00:03:15,000
+Kristiansen sier til NRK at klienten hans ikke erkjenner straffskyld.
+
+44
+00:03:15,000 --> 00:03:17,812
+Det betyr at hun sier hun er uskyldig.
+
+45
+00:03:17,812 --> 00:03:23,362
+Han bekrefter at bortføringen skal ha skjedd nylig, men han vil ikke si hvilket land barnet ble tatt til.
+
+46
+00:03:23,362 --> 00:03:29,475
+Advokaten bekrefter også at de tre involverte – mannen, kvinnen og barnet – har en relasjon til hverandre.
+
+47
+00:03:29,475 --> 00:03:33,062
+Politiet har vært forsiktige med å gi ut detaljer om saken.
+
+48
+00:03:33,062 --> 00:03:36,450
+Dette er vanlig i saker som involverer barn.
+
+49
+00:03:36,450 --> 00:03:40,150
+De ønsker å beskytte barnets identitet og sikkerhet.
+
+50
+00:03:40,150 --> 00:03:44,012
+Det vi vet er at Bergens Tidende var først til å omtale saken.
+
+51
+00:03:44,012 --> 00:03:49,150
+Politiet har foreløpig ikke sagt noe om hvordan barnet ble tatt ut av landet, eller når det skjedde.
+
+52
+00:03:49,150 --> 00:03:54,462
+Slike saker kan være kompliserte fordi de ofte involverer flere land og ulike lover.
+
+53
+00:03:54,462 --> 00:03:59,000
+Barnebortføring er et alvorlig problem i Norge og internasjonalt.
+
+54
+00:03:59,000 --> 00:04:04,087
+Ifølge norsk lov kan omsorgsunndragelse straffes med fengsel i opptil seks år.
+
+55
+00:04:04,087 --> 00:04:10,012
+Hvis noen tar et barn ut av landet uten tillatelse fra den andre forelderen, er det en straffbar handling.
+
+56
+00:04:10,012 --> 00:04:12,675
+Politiet samarbeider ofte med
+
+57
+00:04:12,796 --> 00:04:18,521
+politimyndigheter i andre land gjennom Interpol for å finne bortførte barn og bringe dem trygt hjem igjen.
+
+58
+00:04:18,471 --> 00:04:21,633
+Saken har fått mye oppmerksomhet i Bergen.
+
+59
+00:04:21,633 --> 00:04:25,258
+Mange lurer på hva som har skjedd og hvor barnet befinner seg nå.
+
+60
+00:04:25,258 --> 00:04:29,521
+Politiet sier at de jobber intenst med å få oversikt over situasjonen.
+
+61
+00:04:29,521 --> 00:04:34,346
+De vil trolig be om varetektsfengsling for de siktede i løpet av de neste dagene.
+
+62
+00:04:34,346 --> 00:04:39,583
+Da må en dommer avgjøre om det er nok bevis til å holde dem i fengsel mens etterforskningen pågår.
+
+63
+00:04:39,583 --> 00:04:43,221
+Vi kommer til å høre mer om denne saken i tiden fremover.
+
+64
+00:04:43,221 --> 00:04:47,271
+For pårørende i slike saker er situasjonen svært vanskelig.
+
+65
+00:04:47,271 --> 00:04:52,883
+Når et barn blir tatt til et annet land uten samtykke, kan det ta lang tid før barnet kommer hjem igjen.
+
+66
+00:04:52,883 --> 00:04:58,833
+Utenriksdepartementet kan ofte hjelpe norske borgere i utlandet, men det er en komplisert prosess.
+
+67
+00:04:58,833 --> 00:05:02,796
+Ulike land har forskjellige lover om foreldrerett og barnevern.
+
+68
+00:05:02,796 --> 00:05:08,371
+Derfor er det viktig at politiet handler raskt og samarbeider godt med myndighetene i det aktuelle landet.
+
+69
+00:05:08,371 --> 00:05:13,908
+Ifølge norsk lov har alle barn rett til beskyttelse og omsorg, uansett hvor de befinner seg i verden.
+
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  console.log('VTT cues loaded:', cues.length);
+  buildCueElements();
+  // Show first cue as indicator
+  if (cues.length > 0) {
+    const info = document.createElement('div');
+    info.style.cssText = 'font-size:0.75rem;color:#aaa;margin-bottom:8px;padding:0 14px;';
+    info.textContent = cues.length + ' avsnitt lastet';
+    textDisplay.insertBefore(info, textDisplay.firstChild);
+  }
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      // Scroll into view (commented: causes issues in WeChat browser)
+      // el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>
