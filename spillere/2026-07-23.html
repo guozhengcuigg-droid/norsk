@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+    .player-card { position: relative; top: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="metadata"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"><p style="color:#888;font-size:0.85rem;">Laster tekst ...</p></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-07-23.mp3';
+const TITLE = 'Dagens nyheter – 23. juli 2026';
+const DATE_STR = '2026-07-23';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:03,460 --> 00:00:07,320
+Det har aldri vært så stor interesse for å bli sykepleier i Vestland som nå.
+
+2
+00:00:08,080 --> 00:00:15,020
+Over 1700 personer står på venteliste for å komme inn på sykepleierstudiet ved høyskolene i regionen.
+
+3
+00:00:15,500 --> 00:00:19,780
+Dette er en historisk rekord, og tallet har økt kraftig de siste tre årene.
+
+4
+00:00:20,400 --> 00:00:27,140
+Eksperter mener at økningen kan skyldes flere ting, blant annet større synlighet for helseyrker etter pandemien.
+
+5
+00:00:27,700 --> 00:00:33,060
+En av de heldige som har fått studieplass er Jakob, en ung mann fra Bergens-området.
+
+6
+00:00:33,600 --> 00:00:37,840
+Han forteller til NRK at han lenge har drømt om å jobbe i helsevesenet.
+
+7
+00:00:38,620 --> 00:00:47,600
+«Jeg har alltid likt å hjelpe mennesker, og under pandemien så jeg hvor avgjørende sykepleiere er for at samfunnet skal fungere,» sier han.
+
+8
+00:00:48,440 --> 00:00:56,480
+Nå gleder han seg til å begynne studiene til høsten, og han er spent på hva som venter ham både i klasserommet og i praksisperiodene på sykehus.
+
+9
+00:00:57,880 --> 00:01:01,640
+Norge står overfor en stor mangel på helsepersonell i årene som kommer.
+
+10
+00:01:02,780 --> 00:01:10,940
+Ifølge Statistisk sentralbyrå vil landet mangle rundt 40 000 helsearbeidere innen 2040 dersom utviklingen fortsetter som i dag.
+
+11
+00:01:12,060 --> 00:01:17,500
+Mange av dagens sykepleiere nærmer seg pensjonsalder, og det trengs flere unge som kan ta over.
+
+12
+00:01:18,340 --> 00:01:24,080
+Den store interessen for sykepleierutdanningen er derfor en svært positiv nyhet for norsk helsevesen.
+
+13
+00:01:24,540 --> 00:01:29,780
+Men selv om 1700 personer står i kø, er det langt fra nok studieplasser til alle.
+
+14
+00:01:30,740 --> 00:01:36,420
+Høyskolene i Vestland har til sammen rundt 300 plasser til sykepleierstudiet hvert år.
+
+15
+00:01:37,460 --> 00:01:43,780
+Det betyr at mange kvalifiserte søkere må vente — noen i opptil flere år — før de endelig får begynne på utdanningen.
+
+16
+00:01:44,620 --> 00:01:49,260
+Mange må også flytte til andre deler av landet for å finne en ledig studieplass.
+
+17
+00:01:50,600 --> 00:01:56,260
+Flere politikere har tatt til orde for å opprette flere studieplasser, men budsjettene er begrenset.
+
+18
+00:01:57,560 --> 00:02:04,500
+Helseministeren har tidligere uttalt at regjeringen jobber med en plan for å øke kapasiteten, men at endringer tar tid.
+
+19
+00:02:06,320 --> 00:02:15,020
+Utdanningsinstitusjonene selv sier at de gjerne vil ta inn flere studenter, men at de mangler både lærerkrefter og praksisplasser for å kunne utvide tilbudet.
+
+20
+00:02:16,660 --> 00:02:24,260
+Sykepleierforbundet har lenge krevd en nasjonal rekrutteringsplan for å sikre at det utdannes nok sykepleiere til å møte framtidens behov.
+
+21
+00:02:25,600 --> 00:02:28,620
+Situasjonen i Vestland speiler en nasjonal utfordring.
+
+22
+00:02:29,520 --> 00:02:46,560
+Over hele landet er konkurransen om sykepleierplassene hard, og snittkarakterene for å komme inn har steget år for år. Mange unge må derfor vurdere alternative veier for å nå målet sitt — for eksempel å ta utdanning i utlandet eller begynne som helsefagarbeider først.
+
+23
+00:02:47,280 --> 00:02:53,600
+Uansett vei er håpet det samme: å bli en del av det norske helsevesenet og gjøre en forskjell for pasienter.
+
+24
+00:02:54,740 --> 00:03:06,500
+Jakob mener at dersom Norge virkelig vil løse sykepleiermangelen, må staten investere mer i utdanning. «Det hjelper ikke at mange vil bli sykepleiere hvis de ikke får plass,» sier han.
+
+25
+00:03:07,420 --> 00:03:16,940
+Han peker på at situasjonen er et paradoks: samtidig som landet skriker etter sykepleiere, må motiverte unge mennesker stå i årevis på venteliste.
+
+26
+00:03:18,040 --> 00:03:25,220
+For Jakob selv er det uansett en drøm som går i oppfyllelse — og han lover å gjøre sitt beste for å bli en god sykepleier.
+
+27
+00:03:26,200 --> 00:03:31,600
+Tirsdag kveld ble Bergen sentrum åsted for en dramatisk politijakt — på vannet.
+
+28
+00:03:32,420 --> 00:03:37,260
+En mann hadde stjålet en fritidsbåt fra en av havneområdene og forsøkte å komme seg unna.
+
+29
+00:03:38,040 --> 00:03:47,660
+Politiet satte raskt i gang en intens forfølgelse i Bergens havnebasseng, en jakt som varte i over tjue minutter og som mange fikk med seg fra land.
+
+30
+00:03:48,380 --> 00:03:55,180
+Vitner forteller om en båt som kjørte i svært høy fart gjennom Vågen, tett forfulgt av to politibåter med blålysene på.
+
+31
+00:03:56,520 --> 00:04:03,220
+Mange turister og lokalbefolkningen som satt på uteserveringer langs Bryggen, reiste seg for å se hva som skjedde.
+
+32
+00:04:03,900 --> 00:04:07,760
+Noen trodde først at det var en filminnspilling, så uvirkelig så det ut.
+
+33
+00:04:08,840 --> 00:04:13,360
+«Jeg har aldri sett noe lignende,» sa en turist fra Tyskland som var vitne til hendelsen.
+
+34
+00:04:14,120 --> 00:04:18,660
+Politiet forsøkte flere ganger å få båttyven til å stoppe frivillig, men han nektet.
+
+35
+00:04:19,940 --> 00:04:26,980
+Mannen kjørte i sikksakk mellom andre båter og skapte farlige situasjoner for både seg selv og andre på vannet.
+
+36
+00:04:27,680 --> 00:04:32,460
+Til slutt klarte politiet å manøvrere seg tett inntil den stjålne båten og komme seg om bord.
+
+37
+00:04:33,480 --> 00:04:40,880
+Ifølge politiets rapport var mannen aggressiv og gjorde motstand, og de måtte bruke pepperspray for å få kontroll på situasjonen.
+
+38
+00:04:41,720 --> 00:04:50,440
+Ingen personer ble alvorlig skadet under den ville jakten, men både politiet og vitner beskriver hendelsen som svært dramatisk.
+
+39
+00:04:51,060 --> 00:04:55,340
+«Det kunne ha gått mye verre,» uttalte politiets operasjonsleder til NRK.
+
+40
+00:04:56,840 --> 00:05:08,860
+«Vi er glade for at ingen ble skadet, og at vi fikk avsluttet situasjonen uten større problemer.»
+
+Mannen, som er i 30-årene og fra Bergens-området, ble arrestert på stedet og sitter nå i varetekt.
+
+41
+00:05:09,560 --> 00:05:18,480
+Politiet etterforsker saken bredt, og mannen kan bli siktet for både grovt tyveri og for å ha satt andres liv i fare ved farlig kjøring på sjøen.
+
+42
+00:05:19,340 --> 00:05:22,560
+Han risikerer en betydelig fengselsstraff dersom han blir dømt.
+
+43
+00:05:23,440 --> 00:05:30,460
+Politiet opplyser at de også undersøker om mannen kan være involvert i andre båttyverier i området den siste tiden.
+
+44
+00:05:31,820 --> 00:05:35,460
+Båttyverier har vært et økende problem i Bergens-området de siste ukene.
+
+45
+00:05:37,060 --> 00:05:46,100
+Ifølge Bergensavisen har det vært flere båttyverier i Bergen sør, og politiet mistenker at organiserte grupper kan stå bak noen av tyveriene.
+
+46
+00:05:46,640 --> 00:05:55,280
+Politiet oppfordrer båteiere til å sikre båtene sine godt, spesielt om natten, og til å melde fra om mistenkelig aktivitet i havneområdene.
+
+47
+00:05:56,240 --> 00:06:01,400
+Den spektakulære jakten på tirsdag viser at politiet tar båttyverier på største alvor.
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  console.log('VTT cues loaded:', cues.length);
+  buildCueElements();
+  // Show first cue as indicator
+  if (cues.length > 0) {
+    const info = document.createElement('div');
+    info.style.cssText = 'font-size:0.75rem;color:#aaa;margin-bottom:8px;padding:0 14px;';
+    info.textContent = cues.length + ' avsnitt lastet';
+    textDisplay.insertBefore(info, textDisplay.firstChild);
+  }
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      // Scroll into view (commented: causes issues in WeChat browser)
+      // el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>
