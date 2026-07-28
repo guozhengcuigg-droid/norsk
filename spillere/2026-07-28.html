@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+    .player-card { position: relative; top: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="metadata"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"><p style="color:#888;font-size:0.85rem;">Laster tekst ...</p></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-07-28.mp3';
+const TITLE = 'Dagens nyheter – 28. juli 2026';
+const DATE_STR = '2026-07-28';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:02,900 --> 00:00:03,420
+God tirsdag!
+
+2
+00:00:04,040 --> 00:00:15,000
+I dag har vi to spennende nyheter: en av verdens mest kjente hurtigmatkjeder kommer til Norge for første gang, og en vakker europeisk by får gode nyheter fra Unesco.
+
+3
+00:00:15,660 --> 00:00:16,600
+La oss lese!
+
+4
+00:00:17,340 --> 00:00:22,180
+Den verdenskjente amerikanske hurtigmatkjeden KFC kommer til Norge for første gang.
+
+5
+00:00:22,760 --> 00:00:30,260
+KFC står for Kentucky Fried Chicken, og kjeden ble grunnlagt i 1952 i delstaten Kentucky i USA.
+
+6
+00:00:31,160 --> 00:00:37,960
+KFC er mest kjent for sin friterte kylling med en hemmelig krydderblanding som består av elleve urter og krydder.
+
+7
+00:00:38,680 --> 00:00:44,120
+Oppskriften er så hemmelig at den oppbevares i et spesielt safe i Louisville i Kentucky.
+
+8
+00:00:45,260 --> 00:00:54,760
+I dag har KFC over 25 000 restauranter i mer enn 145 land, men Norge har vært et av de få landene i Europa uten KFC.
+
+9
+00:00:55,480 --> 00:00:57,620
+Nå endrer dette seg endelig.
+
+10
+00:00:58,260 --> 00:01:03,680
+Det estiske selskapet Apollo Group har kjøpt den norske kyllingrestaurantkjeden Fly Chicken.
+
+11
+00:01:04,220 --> 00:01:08,420
+Fly Chicken ble etablert i Norge for noen år siden og har vokst raskt.
+
+12
+00:01:08,980 --> 00:01:17,000
+Kjeden har i dag 19 restauranter spredt over hele landet, blant annet i Oslo, Bergen, Trondheim, Stavanger og Lillestrøm.
+
+13
+00:01:18,300 --> 00:01:22,680
+Planen er å gjøre de fleste av disse restaurantene om til KFC-restauranter.
+
+14
+00:01:24,020 --> 00:01:27,400
+Apollo Group har lang erfaring med å drive KFC-restauranter.
+
+15
+00:01:28,200 --> 00:01:34,320
+Selskapet driver allerede 38 KFC-restauranter i Estland, Latvia, Litauen og Finland.
+
+16
+00:01:35,420 --> 00:01:38,300
+Norge blir dermed det femte KFC-markedet for Apollo Group.
+
+17
+00:01:39,400 --> 00:01:42,800
+Dette er en stor investering i det norske restaurantmarkedet.
+
+18
+00:01:43,400 --> 00:01:50,820
+Administrerende direktør Ronny Gjøse, som har ledet Fly Chicken siden starten, fortsetter i stillingen etter oppkjøpet.
+
+19
+00:01:51,680 --> 00:01:58,740
+Han skal lede det store arbeidet med å bygge om eksisterende restauranter og åpne helt nye KFC-restauranter i Norge.
+
+20
+00:01:59,760 --> 00:02:03,680
+Gjøse sier at den første KFC-restauranten sannsynligvis vil åpne innen et år.
+
+21
+00:02:04,680 --> 00:02:12,740
+Han tør ikke love en åpning allerede i 2026, men lover at det vil være «kyllingbøtter både her og der» i løpet av et år.
+
+22
+00:02:13,800 --> 00:02:17,800
+Gjøse er optimistisk og mener at nordmenn er klare for KFC.
+
+23
+00:02:18,360 --> 00:02:29,000
+Han trekker fram at KFC er en av verdens sterkeste merkevarer, og at Apollo Group har god erfaring med å drive KFC i fire andre europeiske land.
+
+24
+00:02:29,840 --> 00:02:35,940
+Totalt planlegger Apollo Group å investere rundt 20 millioner euro i Norge de neste årene.
+
+25
+00:02:36,960 --> 00:02:40,520
+Dette tilsvarer omtrent 230 millioner norske kroner.
+
+26
+00:02:41,040 --> 00:02:46,580
+Pengene skal brukes både på å kjøpe Fly Chicken og på å videreutvikle virksomheten.
+
+27
+00:02:47,500 --> 00:02:56,160
+I tillegg til å bygge om eksisterende restauranter, planlegger Apollo å åpne flere helt nye KFC-restauranter de neste fem årene.
+
+28
+00:02:56,680 --> 00:03:04,380
+Hvor den aller første KFC-restauranten i Norge skal åpne er ikke bestemt ennå, men Gjøse sier at Oslo er mest nærliggende.
+
+29
+00:03:05,100 --> 00:03:11,460
+Grunnen er at Fly Chicken har flest restauranter og hovedkontoret sitt i Oslo, så det er enklest å starte der.
+
+30
+00:03:12,800 --> 00:03:22,200
+Menyen på de norske KFC-restaurantene vil bli tilpasset det norske markedet, men de klassiske KFC-rettene og de ikoniske kyllingbøttene kommer helt sikkert.
+
+31
+00:03:23,080 --> 00:03:29,820
+Fly Chicken omsatte i fjor for omtrent 155 millioner kroner og har over 170 ansatte.
+
+32
+00:03:30,660 --> 00:03:35,640
+Oppkjøpet innebærer ifølge selskapet ingen negative endringer for de ansatte.
+
+33
+00:03:36,380 --> 00:03:39,520
+Alle som jobber i Fly Chicken i dag vil få beholde jobbene sine.
+
+34
+00:03:40,320 --> 00:03:50,020
+Avtalen mellom Apollo Group og Fly Chicken er signert, men den må gjennom vanlige formelle prosesser og godkjenninger før alt er helt klart.
+
+35
+00:03:50,660 --> 00:03:56,180
+For norske forbrukere betyr dette at det snart blir enda flere valgmuligheter når sulten melder seg.
+
+36
+00:03:57,440 --> 00:04:04,180
+Gamlebyen i Wien, hovedstaden i Østerrike, har blitt fjernet fra Unescos liste over truet verdensarv.
+
+37
+00:04:04,820 --> 00:04:12,660
+Dette er svært gode nyheter for både Wien og for alle som er glad i historisk arkitektur og europeisk kulturarv.
+
+38
+00:04:13,240 --> 00:04:18,960
+Unesco er FNs organisasjon for utdanning, vitenskap, kultur og kommunikasjon.
+
+39
+00:04:19,980 --> 00:04:29,360
+Organisasjonen har en viktig jobb: de lager og vedlikeholder en liste over steder i verden som har spesiell kulturell eller naturmessig verdi.
+
+40
+00:04:30,470 --> 00:04:34,900
+Disse stedene kalles verdensarv, og de er beskyttet av internasjonale avtaler.
+
+41
+00:04:36,440 --> 00:04:40,180
+Wien gamleby har vært på Unescos verdensarvliste siden 2001.
+
+42
+00:04:41,000 --> 00:04:45,640
+Området er kjent over hele verden for sin fantastiske og varierte arkitektur.
+
+43
+00:04:47,060 --> 00:05:05,900
+Her finner man vakre bygninger fra flere forskjellige historiske perioder: fra middelalderen med sine trange gater og små torg, via den storslåtte barokken med palasser og kirker, til perioden sent på 1800-tallet og tidlig på 1900-tallet med elegante bygårder og kaffehus.
+
+44
+00:05:06,700 --> 00:05:14,400
+Gatene i gamlebyen er fulle av historie, og hvert gatehjørne forteller noe om Wiens rike kulturarv.
+
+45
+00:05:15,040 --> 00:05:19,580
+I 2017 ble gamlebyen satt på Unescos rødliste over truet verdensarv.
+
+46
+00:05:20,240 --> 00:05:23,380
+Dette var en alvorlig advarsel til østerrikske myndigheter.
+
+47
+00:05:24,180 --> 00:05:35,940
+Grunnen var at det fantes planer om å bygge et høyhus på hele 73 meter i nærheten av gamlebyen. Unesco mente at et så høyt og moderne bygg ville ødelegge det historiske preget i Wien.
+
+48
+00:05:37,020 --> 00:05:46,220
+Organisasjonen var bekymret for at moderne høyhus skulle skygge over de gamle, vakre bygningene og endre bybildet på en negativ og permanent måte.
+
+49
+00:05:47,060 --> 00:05:51,520
+Når et sted havner på rødlisten, betyr det at verdensarvstatusen er i fare.
+
+50
+00:05:52,280 --> 00:05:56,340
+Nå har situasjonen heldigvis endret seg til det positive.
+
+51
+00:05:57,180 --> 00:06:04,020
+Etter flere år med diskusjoner og forhandlinger mellom Unesco og østerrikske myndigheter, har byggeplanene blitt endret.
+
+52
+00:06:04,980 --> 00:06:09,860
+Det planlagte høyhuset er redusert fra 73 meter til under 50 meter.
+
+53
+00:06:10,680 --> 00:06:16,540
+Dette er en betydelig reduksjon som gjør at bygget ikke lenger ruver over de historiske bygningene.
+
+54
+00:06:17,860 --> 00:06:23,660
+Unesco har godtatt den nye planen, og gamlebyen i Wien er derfor offisielt fjernet fra rødlisten.
+
+55
+00:06:24,460 --> 00:06:32,780
+Dette viser at det går an å finne gode løsninger som tar hensyn til både moderne byutvikling og bevaring av historisk kulturarv.
+
+56
+00:06:33,500 --> 00:06:40,820
+Selv om Wien nå har fått gode nyheter, er det fortsatt 58 steder som står på Unescos rødliste over hele verden.
+
+57
+00:06:42,100 --> 00:06:49,760
+Mange av disse stedene er truet av alvorlige problemer som krig, naturkatastrofer og menneskeskapte klimaendringer.
+
+58
+00:06:50,700 --> 00:07:11,040
+For eksempel er flere verdensarvsteder i Midtøsten truet av pågående konflikter, mens andre steder sliter med effektene av stigende havnivå og ekstremvær. Unesco jobber kontinuerlig med å beskytte verdens kultur- og naturarv, men utfordringene er mange, komplekse og ofte svært vanskelige å løse.
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  console.log('VTT cues loaded:', cues.length);
+  buildCueElements();
+  // Show first cue as indicator
+  if (cues.length > 0) {
+    const info = document.createElement('div');
+    info.style.cssText = 'font-size:0.75rem;color:#aaa;margin-bottom:8px;padding:0 14px;';
+    info.textContent = cues.length + ' avsnitt lastet';
+    textDisplay.insertBefore(info, textDisplay.firstChild);
+  }
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      // Scroll into view (commented: causes issues in WeChat browser)
+      // el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>
