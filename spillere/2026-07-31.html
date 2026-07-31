@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+    .player-card { position: relative; top: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="metadata"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"><p style="color:#888;font-size:0.85rem;">Laster tekst ...</p></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-07-31.mp3';
+const TITLE = 'Dagens nyheter – 31. juli 2026';
+const DATE_STR = '2026-07-31';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:02,440 --> 00:00:06,620
+Torsdag kveld var det stor stemning på Brann Stadion i Bergen.
+
+2
+00:00:07,360 --> 00:00:15,160
+Brann spilte returkamp mot det rumenske laget Universitatea Cluj i andre kvalifiseringsrunde til UEFA Conference League.
+
+3
+00:00:16,040 --> 00:00:20,400
+Første kamp i Romania endte 2-2, så alt var åpent før kampen i Bergen.
+
+4
+00:00:21,860 --> 00:00:26,820
+Kampen startet klokken 19.00, og Brann tok ledelsen allerede etter åtte minutter.
+
+5
+00:00:27,480 --> 00:00:33,820
+Den belgiske forsvarsspilleren Denzel De Roeve scoret et vakkert mål og sendte hjemmelaget i føringen.
+
+6
+00:00:34,620 --> 00:00:37,900
+De rundt 15 000 tilskuerne på Stadion jublet høyt.
+
+7
+00:00:38,740 --> 00:00:40,040
+Men bortelaget ga seg ikke.
+
+8
+00:00:40,760 --> 00:00:46,880
+Etter 26 minutter utlignet den rumenske spilleren Lukić for Cluj, og det sto 1-1 til pause.
+
+9
+00:00:48,020 --> 00:00:50,680
+I andre omgang var det Brann som dominerte kampen.
+
+10
+00:00:51,760 --> 00:00:57,080
+Like før pause i første omgang, på overtid, scoret Niklas Castro sitt første mål for kvelden.
+
+11
+00:00:57,600 --> 00:00:59,240
+Det ga Brann ledelsen 2-1.
+
+12
+00:01:00,340 --> 00:01:04,180
+Utover i kampen presset Brann på for å sikre seieren, og i det 75.
+
+13
+00:01:04,680 --> 00:01:06,880
+minuttet scoret Castro sitt andre mål.
+
+14
+00:01:08,120 --> 00:01:11,720
+Dermed endte kampen 3-1 til Brann, og 5-3 sammenlagt.
+
+15
+00:01:12,520 --> 00:01:16,740
+Dette betyr at Brann er videre til tredje kvalifiseringsrunde i Conference League.
+
+16
+00:01:17,580 --> 00:01:23,420
+Neste motstander er Apollon Limassol fra Kypros. Første kamp spilles på Brann Stadion 6.
+
+17
+00:01:23,800 --> 00:01:26,180
+august, og returkampen går på Kypros 13.
+
+18
+00:01:26,660 --> 00:01:35,660
+august. Dette er fjerde år på rad at Brann spiller europacup-kvalifisering på Stadion, og bergenserne har blitt vant til europeisk motstand.
+
+19
+00:01:36,560 --> 00:01:39,180
+Brann-trener Eirik Horneland var fornøyd etter kampen.
+
+20
+00:01:39,840 --> 00:01:42,920
+Han roste spesielt publikum for den fantastiske stemningen.
+
+21
+00:01:43,780 --> 00:01:45,080
+"Dette var en lagseier.
+
+22
+00:01:45,500 --> 00:01:49,440
+Spillerne jobbet hardt i 90 minutter, og publikum bar oss fram.
+
+23
+00:01:50,100 --> 00:01:54,020
+Nå gleder vi oss til å møte Apollon," sa Horneland til pressen etter kampen.
+
+24
+00:01:54,920 --> 00:01:56,940
+For Brann-fansen er dette en stor dag.
+
+25
+00:01:57,780 --> 00:02:04,860
+Klubben har slitt litt i Eliteserien denne sesongen og ligger på åttende plass, men i Europa lever drømmen videre.
+
+26
+00:02:05,460 --> 00:02:09,800
+Nå håper alle bergensere at laget kan gå enda lenger i turneringen.
+
+27
+00:02:10,600 --> 00:02:16,060
+Conference League er den tredje europeiske klubbturneringen, etter Champions League og Europa League.
+
+28
+00:02:16,620 --> 00:02:23,120
+Turneringen ble startet i 2021 for å gi klubber fra mindre land en bedre sjanse til å spille europacup.
+
+29
+00:02:23,900 --> 00:02:26,660
+For norske lag er Conference League en viktig arena.
+
+30
+00:02:27,380 --> 00:02:30,600
+Det gir både sportslig erfaring og økonomiske inntekter.
+
+31
+00:02:31,380 --> 00:02:34,400
+Brann har reist seg etter en vanskelig start på sesongen.
+
+32
+00:02:35,020 --> 00:02:40,980
+Laget lå nede på nedre halvdel av tabellen i mai, men har vunnet flere viktige kamper i det siste.
+
+33
+00:02:41,720 --> 00:02:45,800
+I Eliteserien møter de Rosenborg på Stadion allerede søndag 2.
+
+34
+00:02:46,180 --> 00:02:48,860
+august, så det blir en travel uke for spillerne.
+
+35
+00:02:49,540 --> 00:02:51,820
+Men først kan de nyte seieren over rumenerne.
+
+36
+00:02:52,580 --> 00:02:57,140
+Å komme til gruppespillet i Conference League ville vært en stor prestasjon for Brann.
+
+37
+00:02:57,840 --> 00:03:02,220
+Det ville bety minst seks kamper til mot lag fra andre europeiske land.
+
+38
+00:03:03,660 --> 00:03:10,940
+Sist et norsk lag nådde gruppespillet i en europeisk turnering var Bodø/Glimt, som har gjort det flere ganger de siste årene.
+
+39
+00:03:12,040 --> 00:03:14,080
+Nå drømmer Brann om å følge i deres fotspor.
+
+40
+00:03:14,780 --> 00:03:17,300
+Norge står overfor en ny handelsutfordring med USA.
+
+41
+00:03:18,460 --> 00:03:24,640
+President Donald Trump har innført en ny toll på 12,5 prosent på mange varer som USA importerer fra Norge.
+
+42
+00:03:25,720 --> 00:03:31,400
+Dette er dårlige nyheter for norsk eksportindustri, og regjeringen reagerer raskt.
+
+43
+00:03:32,420 --> 00:03:37,860
+Utenriksminister Espen Barth Eide har kalt tollen "urettferdig" og sier at Norge vil utfordre den.
+
+44
+00:03:39,720 --> 00:03:47,340
+Ifølge newsinenglish.nå samler nå norske myndigheter næringslivsledere for å planlegge hvordan de skal møte den nye situasjonen.
+
+45
+00:03:48,040 --> 00:03:51,360
+Møtet skal finne sted i Oslo i løpet av de neste dagene.
+
+46
+00:03:52,080 --> 00:04:00,820
+Norge er ikke medlem av EU, men er en del av EØS-avtalen. Derfor har Norge et spesielt forhold til både EU og USA når det gjelder handel.
+
+47
+00:04:01,940 --> 00:04:21,380
+Den nye tollen fra USA kan ramme mange norske bedrifter, særlig innen fiskeri, metallindustri og teknologi. Norsk laks er en av de største eksportvarene til USA, og en toll på 12,5 prosent kan gjøre norsk laks dyrere for amerikanske forbrukere.
+
+48
+00:04:22,180 --> 00:04:27,780
+Regjeringen er bekymret for at dette kan føre til færre arbeidsplasser i norsk eksportindustri.
+
+49
+00:04:28,980 --> 00:04:34,800
+"Vi må forsvare norske interesser og norske arbeidsplasser," sa Barth Eide i en uttalelse.
+
+50
+00:04:35,440 --> 00:04:49,440
+Han understreket også at Norge ønsker å fortsette det gode samarbeidet med USA, men at tollen er et problem som må løses. Situasjonen er spesielt vanskelig fordi Norge tidligere har hatt et godt handelsforhold med USA.
+
+51
+00:04:55,880 --> 00:05:01,100
+Amerikanske forbrukere kjøper norsk laks for milliarder av kroner hvert år.
+
+52
+00:05:02,080 --> 00:05:07,400
+Også norsk teknologi, oljeutstyr og metallprodukter er populære i det amerikanske markedet.
+
+53
+00:05:11,060 --> 00:05:28,480
+Norske fiskerier er spesielt bekymret. Laksenæringen sysselsetter tusenvis av mennesker langs kysten, særlig i Nord-Norge og på Vestlandet. Hvis salget til USA går ned, kan det få store konsekvenser for lokalsamfunn som er avhengige av fiskeri. Eksperter sier at Norge har flere muligheter.
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  console.log('VTT cues loaded:', cues.length);
+  buildCueElements();
+  // Show first cue as indicator
+  if (cues.length > 0) {
+    const info = document.createElement('div');
+    info.style.cssText = 'font-size:0.75rem;color:#aaa;margin-bottom:8px;padding:0 14px;';
+    info.textContent = cues.length + ' avsnitt lastet';
+    textDisplay.insertBefore(info, textDisplay.firstChild);
+  }
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      // Scroll into view (commented: causes issues in WeChat browser)
+      // el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>
