@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+    .player-card { position: relative; top: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="metadata"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"><p style="color:#888;font-size:0.85rem;">Laster tekst ...</p></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-08-01.mp3';
+const TITLE = 'Dagens nyheter – 1. august 2026';
+const DATE_STR = '2026-08-01';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:04,200 --> 00:00:06,740
+Torsdag ettermiddag kom det en gledelig nyhet fra Danmark.
+
+2
+00:00:07,720 --> 00:00:13,680
+Skoleskipet «Statsraad Lehmkuhl» hadde vunnet den tredje og siste etappen av Tall Ships Races.
+
+3
+00:00:14,840 --> 00:00:21,520
+Dette er første gang på syv år at det bergenske skipet vinner en etappe i denne internasjonale seilkonkurransen.
+
+4
+00:00:22,840 --> 00:00:27,260
+Skipet var raskest i sin klasse og vant også den samlede etappekonkurransen.
+
+5
+00:00:28,020 --> 00:00:32,840
+For mannskapet og alle som er glade i dette historiske skipet, var dette en stor dag.
+
+6
+00:00:33,820 --> 00:00:38,100
+Statsraad Lehmkuhl er et tremastet bark som ble bygget i Tyskland i 1914.
+
+7
+00:00:39,520 --> 00:00:44,440
+Skipet har vært i norsk eie siden 1921, og har Bergen som sin hjemmehavn.
+
+8
+00:00:45,040 --> 00:00:58,280
+I dag fungerer skipet som et skoleskip hvor ungdommer og voksne kan lære om seiling, sjømannskap og samarbeid. Skipet har seilt over hele verden og er et kjent symbol for både Bergen og Norge.
+
+9
+00:00:58,980 --> 00:01:05,420
+Mange bergensere har et spesielt forhold til dette skipet, som ofte kan sees i Vågen i Bergen sentrum.
+
+10
+00:01:06,180 --> 00:01:15,480
+Tall Ships Races er en av verdens største seilkonkurranser for store seilskip. Hvert år deltar titalls skip fra mange forskjellige land.
+
+11
+00:01:16,320 --> 00:01:25,920
+Konkurransen går over flere etapper mellom ulike havnebyer i Europa. I år gikk den siste etappen fra Stavanger i Norge til Aalborg i Danmark.
+
+12
+00:01:26,820 --> 00:01:31,520
+Det var på denne etappen at Statsraad Lehmkuhl endelig tok sin etterlengtede seier.
+
+13
+00:01:32,140 --> 00:01:38,040
+Sist skipet vant en etappe var i 2019, så gleden var stor både om bord og på land.
+
+14
+00:01:38,760 --> 00:02:01,560
+Skipets kaptein og mannskap har jobbet hardt for å holde skipet i topp stand til konkurransen. Et seilskip fra 1914 krever mye vedlikehold, og det er mange frivillige som bruker sin fritid på å ta vare på skipet. Seieren i Tall Ships Races er derfor også en seier for alle ildsjelene som jobber for å bevare denne delen av norsk maritim historie.
+
+15
+00:02:02,220 --> 00:02:13,680
+Det viser at gammel kunnskap og tradisjon fortsatt har stor verdi i dagens samfunn. Seieren kommer på et tidspunkt hvor det er ekstra fokus på maritim kulturarv i Norge.
+
+16
+00:02:14,420 --> 00:02:23,760
+Statsraad Lehmkuhl er ikke bare et vakkert skip, men også et flytende museum som forteller historien om Norges lange tradisjon som sjøfartsnasjon.
+
+17
+00:02:24,680 --> 00:02:30,620
+Når skipet nå returnerer til Bergen, vil det uten tvil bli tatt imot med stor begeistring fra byens innbyggere.
+
+18
+00:02:31,340 --> 00:02:46,180
+Skipet skal senere i sommer delta på flere arrangementer i Bergen og resten av Vestlandet. Mens Statsraad Lehmkuhl representerer en maritim suksesshistorie, står en annen del av den norske kystkulturen i fare for å forsvinne.
+
+19
+00:02:47,080 --> 00:02:52,500
+Langs hele norskekysten finnes det omtrent 100.000 små båthus, kalt naust.
+
+20
+00:02:53,260 --> 00:02:58,180
+Disse enkle bygningene har vært en viktig del av norsk kystkultur i mange hundre år.
+
+21
+00:02:58,900 --> 00:03:05,040
+Men nå står mange av dem til nedfalls, og nesten halvparten har forsvunnet i løpet av de siste tjue årene.
+
+22
+00:03:05,960 --> 00:03:10,540
+Eksperter advarer om at vi kan miste en helt sentral del av vår kulturarv.
+
+23
+00:03:11,120 --> 00:03:15,520
+Naustene ble opprinnelig brukt til å oppbevare båter og fiskeredskaper.
+
+24
+00:03:16,340 --> 00:03:20,780
+I det gamle fiskebondesamfunnet var naustet like viktig som låven på gården.
+
+25
+00:03:22,380 --> 00:03:27,100
+Hver kveld ble trebåtene dratt opp fra sjøen og inn i naustet for å hvile under et saltak.
+
+26
+00:03:28,360 --> 00:03:34,760
+Men i dag bruker de færreste små trebåter til fiske, og mange naust har mistet sin opprinnelige funksjon.
+
+27
+00:03:35,500 --> 00:03:39,100
+Når et naust ikke lenger blir brukt, begynner det raskt å forfalle.
+
+28
+00:03:39,920 --> 00:03:45,400
+Vær og vind, kombinert med stadig villere klima, gjør at bygningene brytes ned fortere enn før.
+
+29
+00:03:46,500 --> 00:03:57,140
+Heldigvis finnes det folk som nekter å gi opp disse gamle bygningene. For syv år siden startet båtbyggeren Ove Losnegård en mobil «redningsgruppe» i Fjaler i Vestland.
+
+30
+00:03:57,880 --> 00:04:02,700
+Gruppen reiser rundt til naust som står i fare for å rase sammen, og gir dem akutt førstehjelp.
+
+31
+00:04:03,680 --> 00:04:12,020
+De tetter taket, retter opp veggene og sikrer fundamentet. På sju år har de reddet over tjue naust fra å gli på sjøen.
+
+32
+00:04:12,700 --> 00:04:18,440
+Som betaling må eieren stille med mat og husly, og love å fullføre restaureringen senere.
+
+33
+00:04:19,360 --> 00:04:22,480
+Regjeringen har også begynt å ta situasjonen på alvor.
+
+34
+00:04:23,360 --> 00:04:28,940
+For første gang er det i statsbudsjettet for 2026 satt av penger spesielt til bevaring av naust.
+
+35
+00:04:30,220 --> 00:04:38,600
+Klima- og miljøminister Andreas Bjelland Eriksen sier at et endret klima med kraftigere nedbør er en stor belastning for bygninger langs kysten.
+
+36
+00:04:39,340 --> 00:04:45,020
+Men han ser også et stort engasjement for kulturarven, og mener det absolutt er håp for naustene.
+
+37
+00:04:45,780 --> 00:04:51,220
+Målet med pengene er å støtte eiere og frivillige som vil ta vare på de gamle bygningene.
+
+38
+00:04:51,960 --> 00:04:57,600
+Mange eksperter mener at den beste måten å redde naustene på, er å gi dem ny bruk.
+
+39
+00:04:58,400 --> 00:05:03,920
+Et naust kan for eksempel bli et koselig gjestehus, et lite kontor eller et kunstneratelier.
+
+40
+00:05:04,600 --> 00:05:08,940
+Men for å få til dette, må eierne ofte søke om bruksendring hos kommunen.
+
+41
+00:05:09,640 --> 00:05:15,140
+I dag er plan- og bygningsloven ganske streng når det gjelder hva man kan bruke bygninger i strandsonen til.
+
+42
+00:05:15,980 --> 00:05:21,560
+Flere organisasjoner, som Fortidsminneforeningen, jobber derfor for å gjøre regelverket mer fleksibelt.
+
+43
+00:05:22,300 --> 00:05:25,580
+De mener at bruk er den beste formen for vern.
+
+44
+00:05:26,780 --> 00:05:33,300
+Generalsekretær Ola Harald Fjeldheim i Fortidsminneforeningen mener at naustene er med på å definere Norge som kystnasjon.
+
+45
+00:05:34,680 --> 00:05:41,780
+Han påpeker at landet vårt er bygget på båt og fiske, ikke bare langs kysten men også ved innsjøene på Østlandet.
+
+46
+00:05:42,400 --> 00:05:46,760
+Å la disse bygningene forsvinne, sier han, er rett og slett for dumt.
+
+47
+00:05:47,980 --> 00:05:51,460
+Naustene er ikke bare gamle hus som står i veien for moderne utvikling.
+
+48
+00:05:52,140 --> 00:06:01,060
+De er tause vitner om et liv knyttet til havet, og de bærer med seg kunnskap, identitet og historie som er viktig for å forstå hvem vi er som folk.
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  console.log('VTT cues loaded:', cues.length);
+  buildCueElements();
+  // Show first cue as indicator
+  if (cues.length > 0) {
+    const info = document.createElement('div');
+    info.style.cssText = 'font-size:0.75rem;color:#aaa;margin-bottom:8px;padding:0 14px;';
+    info.textContent = cues.length + ' avsnitt lastet';
+    textDisplay.insertBefore(info, textDisplay.firstChild);
+  }
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      // Scroll into view (commented: causes issues in WeChat browser)
+      // el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>
