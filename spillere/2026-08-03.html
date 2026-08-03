@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+    .player-card { position: relative; top: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="metadata"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"><p style="color:#888;font-size:0.85rem;">Laster tekst ...</p></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-08-03.mp3';
+const TITLE = 'Dagens nyheter – 3. august 2026';
+const DATE_STR = '2026-08-03';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:03,720 --> 00:00:11,720
+Etter over seks uker med leting har politiet og frivillige endelig funnet 24 år gamle Thomas Niiranen Hamre.
+
+2
+00:00:12,200 --> 00:00:16,880
+Han ble funnet død i elva Osen i Gloppen kommune søndag 2. august.
+
+3
+00:00:17,520 --> 00:00:27,240
+Familien bekreftet nyheten gjennom sin talsperson Jan Erik Mardal mandag morgen. Den unge mannen hadde vært savnet siden en ulykke den 21.
+
+4
+00:00:27,580 --> 00:00:35,200
+juni i år. Ulykken skjedde da Hamre var i nærheten av elva Osen, som renner gjennom Gloppen i Vestland fylke.
+
+5
+00:00:36,340 --> 00:00:38,540
+Etter ulykken startet en stor leteaksjon.
+
+6
+00:00:39,640 --> 00:00:44,380
+Mange frivillige fra lokalsamfunnet deltok sammen med politi og redningsmannskaper.
+
+7
+00:00:44,980 --> 00:00:47,400
+De lette i flere uker, men uten å finne ham.
+
+8
+00:00:48,180 --> 00:00:57,120
+Håpet ble mindre for hver dag som gikk, men familien ga aldri helt opp. De håpet at de i det minste skulle få visshet om hva som hadde skjedd.
+
+9
+00:00:58,340 --> 00:01:03,140
+Funnet ble gjort i et område av elva mellom Sandalsvatnet og Lonevatnet.
+
+10
+00:01:04,000 --> 00:01:07,780
+Dette er et område som faktisk hadde blitt gjennomsøkt tidligere.
+
+11
+00:01:08,420 --> 00:01:15,580
+Det viser hvor vanskelig det kan være å finne en person i norsk natur, selv med moderne utstyr og mange hjelpere.
+
+12
+00:01:16,580 --> 00:01:22,900
+Elva Osen er kjent for å ha sterke strømmer og ujevnt terreng, noe som gjør letearbeidet ekstra krevende.
+
+13
+00:01:23,660 --> 00:01:28,500
+Ifølge familiens talsperson er familien både lettet og preget av nyheten.
+
+14
+00:01:29,320 --> 00:01:33,700
+De er lettet fordi de endelig har fått svar på hva som skjedde med sønnen deres.
+
+15
+00:01:34,460 --> 00:01:37,740
+Samtidig er de selvfølgelig veldig triste over at han er død.
+
+16
+00:01:38,280 --> 00:01:42,980
+Familien ønsker å takke alle som har bidratt i leteaksjonen på ulike måter.
+
+17
+00:01:43,860 --> 00:01:51,920
+Mange frivillige brukte time etter time på å lete, og lokalsamfunnet i Gloppen har vist stor omsorg og støtte gjennom hele perioden.
+
+18
+00:01:52,770 --> 00:01:57,380
+Denne saken minner oss om hvor viktig lokalsamfunnet er i krisesituasjoner.
+
+19
+00:01:57,960 --> 00:02:03,780
+Når noen blir borte i Norge, stiller ofte folk opp fra hele regionen for å hjelpe til.
+
+20
+00:02:05,120 --> 00:02:08,840
+Leteaksjonen etter Thomas Niiranen Hamre er et eksempel på dette.
+
+21
+00:02:09,800 --> 00:02:15,200
+Selv om resultatet ble trist, kan familien nå begynne å sørge og finne en form for avslutning.
+
+22
+00:02:16,040 --> 00:02:18,860
+Saken ble først omtalt av lokalavisen Firda Tidend.
+
+23
+00:02:19,340 --> 00:02:24,120
+Gloppen er en liten kommune i Vestland med rundt 5.800 innbyggere.
+
+24
+00:02:24,740 --> 00:02:30,700
+I slike små lokalsamfunn kjenner ofte alle hverandre, og en tragedie som denne berører hele bygda.
+
+25
+00:02:31,640 --> 00:02:38,380
+Ordføreren i Gloppen har tidligere uttrykt medfølelse med familien og takket alle frivillige for innsatsen.
+
+26
+00:02:39,240 --> 00:02:52,240
+Det er ventet at kommunen vil arrangere en minnestund for Thomas når familien er klar for det. Slike hendelser viser hvor sårbare vi er i møte med naturen, men også hvor sterke vi kan være når vi står sammen.
+
+27
+00:02:53,260 --> 00:03:02,320
+Med bare én uke igjen til studiestart ved norske universiteter og høyskoler, står over 17.000 studenter fortsatt uten et sted å bo.
+
+28
+00:03:04,100 --> 00:03:08,820
+Tall fra Samskipnadsrådet viser at 17.105 studenter venter på studentbolig.
+
+29
+00:03:11,060 --> 00:03:16,360
+Det er 921 flere enn på samme tid i fjor, og det er det høyeste tallet som noen gang er registrert.
+
+30
+00:03:17,240 --> 00:03:20,240
+Situasjonen skaper bekymring blant studentorganisasjonene.
+
+31
+00:03:20,880 --> 00:03:22,400
+Det er ikke bare dårlige nyheter.
+
+32
+00:03:22,960 --> 00:03:27,400
+Aldri før har så mange studenter faktisk fått tilbud om studentbolig som i år.
+
+33
+00:03:28,220 --> 00:03:32,480
+Problemet er at etterspørselen vokser enda raskere enn antall nye boliger.
+
+34
+00:03:34,160 --> 00:03:41,140
+Mange studenter som ikke får studentbolig, må ut på det private leiemarkedet. Der er situasjonen også vanskelig.
+
+35
+00:03:42,280 --> 00:03:48,920
+Cirka 10 prosent av alle private leieboliger har forsvunnet fra markedet de siste årene, ifølge Norsk Studentorganisasjon.
+
+36
+00:03:49,680 --> 00:03:54,920
+Leder i Norsk Studentorganisasjon, Eva Franko Aas, er tydelig på hva som må gjøres.
+
+37
+00:03:55,900 --> 00:03:59,340
+Hun mener at tallene viser hvor viktig det er å satse mer på studentboliger.
+
+38
+00:03:59,800 --> 00:04:12,180
+«Når ca. 10 prosent av alle private leieboliger har forsvunnet fra markedet, så er det ikke rart at flere vender mot studentboliger. Og det understreker hvorfor det er så viktig at man bygger mer,» sier hun til NRK.
+
+39
+00:04:13,420 --> 00:04:19,840
+Organisasjonen jobber for at staten skal bevilge mer penger til bygging av studentboliger over hele landet.
+
+40
+00:04:20,460 --> 00:04:22,780
+De lengste køene finner vi i de store byene.
+
+41
+00:04:23,620 --> 00:04:28,020
+I Oslo står over 5.500 studenter i kø for å få studentbolig.
+
+42
+00:04:28,540 --> 00:04:37,500
+Også i Bergen, Trondheim og Stavanger er situasjonen presset. I Bergen er det Studentsamskipnaden Sammen som har ansvaret for studentboligene.
+
+43
+00:04:38,840 --> 00:04:42,340
+De har flere tusen boliger, men også her er det mange som venter.
+
+44
+00:04:43,100 --> 00:04:52,740
+For studenter som skal begynne på Universitetet i Bergen, Høgskulen på Vestlandet eller NHH denne høsten, kan boligjakten bli en stressende start på studentlivet.
+
+45
+00:04:53,880 --> 00:04:57,200
+Eksperter peker på flere grunner til at boligkøen har blitt så lang.
+
+46
+00:04:58,260 --> 00:05:02,120
+For det første har antall studenter i Norge økt jevnt de siste årene.
+
+47
+00:05:02,500 --> 00:05:10,240
+For det andre har flere private utleiere solgt leilighetene sine eller gått over til kortidsutleie via plattformer som Airbnb.
+
+48
+00:05:11,300 --> 00:05:16,800
+For det tredje har byggekostnadene økt, noe som gjør det dyrere å bygge nye studentboliger.
+
+49
+00:05:17,620 --> 00:05:27,740
+Løsningen, mener mange, er en kombinasjon av flere statlige midler, raskere byggeprosesser og bedre samarbeid mellom studentsamskipnadene og kommunene.
+
+50
+00:05:28,360 --> 00:05:36,800
+For studentene som fortsatt ikke har funnet bolig, finnes det noen alternativer. Mange velger å bo hjemme hos foreldrene litt lenger enn planlagt.
+
+51
+00:05:37,580 --> 00:05:41,500
+Andre leier privat sammen med venner for å dele på kostnadene.
+
+52
+00:05:42,180 --> 00:05:51,400
+Noen studentsamskipnader tilbyr også midlertidige løsninger, som for eksempel sovesaler eller midlertidige boliger, i de første ukene av semesteret.
+
+53
+00:05:52,440 --> 00:05:58,500
+Likevel er det tydelig at Norge trenger en langsiktig plan for å bygge nok studentboliger til alle.
+
+54
+00:05:59,660 --> 00:06:07,060
+Studenter er en viktig del av byenes liv og kultur, og de fortjener et trygt og rimelig sted å bo mens de studerer.
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  console.log('VTT cues loaded:', cues.length);
+  buildCueElements();
+  // Show first cue as indicator
+  if (cues.length > 0) {
+    const info = document.createElement('div');
+    info.style.cssText = 'font-size:0.75rem;color:#aaa;margin-bottom:8px;padding:0 14px;';
+    info.textContent = cues.length + ' avsnitt lastet';
+    textDisplay.insertBefore(info, textDisplay.firstChild);
+  }
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      // Scroll into view (commented: causes issues in WeChat browser)
+      // el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>
