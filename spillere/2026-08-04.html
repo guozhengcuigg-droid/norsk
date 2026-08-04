@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+    .player-card { position: relative; top: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="metadata"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"><p style="color:#888;font-size:0.85rem;">Laster tekst ...</p></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-08-04.mp3';
+const TITLE = 'Dagens nyheter – 4. august 2026';
+const DATE_STR = '2026-08-04';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:02,680 --> 00:00:03,200
+God tirsdag!
+
+2
+00:00:03,680 --> 00:00:05,660
+I dag har vi to viktige nyheter for deg.
+
+3
+00:00:06,160 --> 00:00:09,340
+Den første handler om en norsk kulturskatt som kan forsvinne.
+
+4
+00:00:10,120 --> 00:00:15,660
+Den andre handler om noe alle i Norge har merket: offentlige nettsider som ikke virker.
+
+5
+00:00:16,480 --> 00:00:22,480
+Dette er saker som påvirker både norsk kulturarv og hverdagen til millioner av nordmenn.
+
+6
+00:00:23,060 --> 00:00:23,940
+La oss begynne!
+
+7
+00:00:24,740 --> 00:00:30,240
+Den lille bygda Aurland, innerst i Sognefjorden, har en helt spesiell plass i norsk historie.
+
+8
+00:00:31,100 --> 00:00:33,380
+Her har de laget sko siden 1930-tallet.
+
+9
+00:00:34,400 --> 00:00:40,260
+Aurlandskoen er en klassisk norsk sko, kjent over hele verden som den originale «Penny Loafer».
+
+10
+00:00:40,980 --> 00:00:43,700
+Men nå står fabrikken i fare for å bli lagt ned.
+
+11
+00:00:44,180 --> 00:00:48,460
+Aurland Skofabrikk er den aller siste skofabrikken i hele Norge.
+
+12
+00:00:49,280 --> 00:00:54,820
+Fabrikken har tapt mellom 20 og 30 millioner kroner de siste 18 årene.
+
+13
+00:00:55,580 --> 00:01:01,180
+Eieren er reiselivskonsernet Norway's Best, som tok over driften for nesten 20 år siden.
+
+14
+00:01:01,860 --> 00:01:03,900
+De har prøvd mange ting for å snu utviklingen.
+
+15
+00:01:04,720 --> 00:01:10,280
+De har startet produksjon av vesker, laget nye modeller av skoen, og tatt imot turister i fabrikken.
+
+16
+00:01:10,980 --> 00:01:12,560
+Men tallene er fortsatt røde.
+
+17
+00:01:13,400 --> 00:01:19,440
+Driftsdirektør Bent Cato Danielsen sier at i verste fall vil den siste skofabrikken i Norge bli lagt ned.
+
+18
+00:01:20,240 --> 00:01:22,280
+– Vi har gått med tap siden 2008.
+
+19
+00:01:22,920 --> 00:01:27,700
+Det viser hvor viktig vi mener dette er som historie og kulturarv, sier Danielsen.
+
+20
+00:01:28,600 --> 00:01:35,300
+På et tidspunkt var det hele 19 skofabrikker i den lille bygda Aurland, men bare Aurland Skofabrikk har overlevd.
+
+21
+00:01:36,460 --> 00:01:39,680
+Hver eneste Aurlandsko blir håndlaget av dyktige skomakere.
+
+22
+00:01:40,860 --> 00:01:45,120
+Produksjonsleder Roger Skjoldal kan lage opp mot 30 sko på en god dag.
+
+23
+00:01:45,860 --> 00:01:50,260
+Men det er et stort problem: Det blir færre og færre skomakere i Norge.
+
+24
+00:01:51,620 --> 00:01:57,640
+Produksjonsutstyret i fabrikken er også gammelt, og nytt utstyr vil koste titalls millioner kroner.
+
+25
+00:01:58,380 --> 00:02:03,480
+I tillegg har den svake norske kronen gjort det dyrere å kjøpe lær og såler fra utlandet.
+
+26
+00:02:04,760 --> 00:02:16,120
+Likevel er Aurlandskoen mer populær enn noen gang i moteverdenen. Skoen har vært i motemagasinet Vogue, samarbeidet med klesmerket Holzweiler, og gått på catwalken under Oslo Fashion Week.
+
+27
+00:02:16,980 --> 00:02:26,780
+Motekommentator Iben Bergstrøm i Bergens Tidende sier at skandinavisk mote, eller «Scandi fashion», er veldig populært i utlandet akkurat nå.
+
+28
+00:02:27,820 --> 00:02:30,840
+Hun mener Aurlandskoen passer perfekt inn i denne trenden.
+
+29
+00:02:31,740 --> 00:02:34,000
+– En Aurlandsko har du i årevis, om ikke tiår.
+
+30
+00:02:34,400 --> 00:02:37,660
+Det er et fantastisk håndverk, sier Bergstrøm.
+
+31
+00:02:38,480 --> 00:02:40,360
+Men hva betyr skoen for lokalbefolkningen?
+
+32
+00:02:41,120 --> 00:02:46,400
+89 år gamle Arne Sunde fra Aurland har kjøpt Aurlandsko siden han var en liten gutt.
+
+33
+00:02:47,640 --> 00:02:50,040
+– Aurlandsko er en del av identiteten vår, sier han.
+
+34
+00:02:50,920 --> 00:02:55,680
+Hver sommer kommer turister fra hele verden for å se hvordan skoene blir laget.
+
+35
+00:02:56,500 --> 00:02:59,320
+De får lukte læret og høre symaskinene i aksjon.
+
+36
+00:03:00,060 --> 00:03:03,580
+Fabrikken har også et eget museum som er åpent for besøkende.
+
+37
+00:03:04,740 --> 00:03:07,880
+Folk fra hele Norge sender tiøringer i posten til fabrikken.
+
+38
+00:03:08,500 --> 00:03:10,260
+Noen av pakkene veier flere kilo.
+
+39
+00:03:11,760 --> 00:03:18,600
+Tiøringene får nytt liv i den lille lommen på hver eneste Aurlandsko – et sjarmerende kjennemerke som har vært med helt fra starten.
+
+40
+00:03:19,420 --> 00:03:37,260
+Nå vurderer Norway's Best flere alternativer: selge bedriften, flytte produksjonen til utlandet, eller utvikle fabrikken videre med nye investeringer. Natt til mandag 3. august oppsto det store problemer med innlogging til offentlige tjenester i Norge.
+
+41
+00:03:37,960 --> 00:03:41,280
+Det melder Digitaliseringsdirektoratet, også kalt Digdir.
+
+42
+00:03:42,080 --> 00:03:46,120
+De er den statlige etaten som har ansvar for digitalisering i Norge.
+
+43
+00:03:46,820 --> 00:03:53,020
+Problemene rammet flere av landets viktigste digitale tjenester, og tirsdag morgen var ennå ikke alt løst.
+
+44
+00:03:53,800 --> 00:03:55,080
+Hvilke tjenester er rammet?
+
+45
+00:03:56,260 --> 00:04:06,380
+Listen er lang: ID-porten, som er den vanligste måten å logge seg inn på offentlige nettsider, MinID, Helsenorge, Altinn, NAV og Skatteetaten.
+
+46
+00:04:07,000 --> 00:04:10,280
+Alle disse tjenestene bruker Digdir sine innloggingsløsninger.
+
+47
+00:04:11,060 --> 00:04:14,380
+Også Maskinporten, eFormidling og Ansattporten var berørt.
+
+48
+00:04:15,140 --> 00:04:32,740
+For vanlige folk betyr dette at de ikke kan sjekke skatten sin, bestille legetime på nett, eller sende dokumenter til det offentlige. I Bergen fikk problemene ekstra konsekvenser fordi mandag var oppstartsdag for mange skolefritidsordninger, som vi kaller SFO, og barnehager.
+
+49
+00:04:33,700 --> 00:04:42,460
+Bergen kommune bekrefter at innloggingsproblemene rammet appen Vigilo, som mange foreldre bruker for å kommunisere med skole og barnehage.
+
+50
+00:04:43,180 --> 00:04:47,400
+– Foreldre som ikke har vært inne i Vigilo-appen på en stund, må logge inn med MinID.
+
+51
+00:04:48,860 --> 00:04:56,260
+Det er grunnen til at noen opplever problemer i dag, forklarer Trond Helgesen, som er rådgiver i etat for skole i Bergen kommune.
+
+52
+00:04:57,080 --> 00:05:04,640
+Digdir har jobbet med å løse problemene siden natt til mandag, men de har ikke kunnet gi noe klart svar på når alt vil være i orden igjen.
+
+53
+00:05:06,360 --> 00:05:15,100
+Kommunikasjonsrådgiver Sara Naziri i Digdir sier at driftspartneren jobber med saken, men at de ikke har noe anslag for når problemene blir løst.
+
+54
+00:05:16,260 --> 00:05:18,720
+Årsaken til problemene er foreløpig ukjent.
+
+55
+00:05:19,380 --> 00:05:22,160
+Dette er ikke første gang Digdir opplever problemer.
+
+56
+00:05:22,880 --> 00:05:29,280
+I slutten av juni ble leverandøren deres, Vivicta, utsatt for et såkalt DDoS-angrep.
+
+57
+00:05:30,000 --> 00:05:34,080
+Det er et dataangrep som overbelaster en tjeneste slik at den blir utilgjengelig.
+
+58
+00:05:34,680 --> 00:05:37,420
+Den gangen var tjenestene nede i nesten et helt døgn.
+
+59
+00:05:38,340 --> 00:05:42,820
+Norsk helsenett har også sendt ut en egen melding om at Helsenorge er rammet.
+
+60
+00:05:43,620 --> 00:05:49,260
+For pasienter betyr dette at de for eksempel ikke kan fornye resepter eller se prøvesvar på nett.
+
+61
+00:05:50,720 --> 00:05:59,520
+Mange har også opplevd problemer med å logge seg inn på nettsidene til Nav, der man blant annet søker om dagpenger, sykepenger og andre ytelser.
+
+62
+00:06:00,480 --> 00:06:08,680
+Situasjonen viser hvor avhengig det norske samfunnet har blitt av digitale tjenester – og hvor sårbart systemet kan være når noe går galt.
+
+63
+00:06:09,720 --> 00:06:15,180
+Digdir understreker at ingen personopplysninger har kommet på avveie i forbindelse med problemene.
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  console.log('VTT cues loaded:', cues.length);
+  buildCueElements();
+  // Show first cue as indicator
+  if (cues.length > 0) {
+    const info = document.createElement('div');
+    info.style.cssText = 'font-size:0.75rem;color:#aaa;margin-bottom:8px;padding:0 14px;';
+    info.textContent = cues.length + ' avsnitt lastet';
+    textDisplay.insertBefore(info, textDisplay.firstChild);
+  }
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      // Scroll into view (commented: causes issues in WeChat browser)
+      // el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>
