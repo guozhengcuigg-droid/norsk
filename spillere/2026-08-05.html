@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+    .player-card { position: relative; top: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="metadata"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"><p style="color:#888;font-size:0.85rem;">Laster tekst ...</p></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-08-05.mp3';
+const TITLE = 'Dagens nyheter – 5. august 2026';
+const DATE_STR = '2026-08-05';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:03,380 --> 00:00:09,060
+USA, Iran og Oman er nær en midlertidig avtale om å gjenåpne Hormuzstredet.
+
+2
+00:00:09,660 --> 00:00:13,140
+Det melder det amerikanske nyhetsnettstedet Axios, ifølge NRK.
+
+3
+00:00:14,740 --> 00:00:21,760
+To regionale kilder og en amerikansk tjenestemann sier at partene kan bli enige allerede i dag eller i morgen.
+
+4
+00:00:22,440 --> 00:00:26,720
+Også nyhetsbyrået AFP bekrefter at en avtale kan være på vei.
+
+5
+00:00:27,760 --> 00:00:34,540
+Hormuzstredet ligger mellom Iran og Oman, og det er en av verdens viktigste sjøruter for olje og gass.
+
+6
+00:00:35,380 --> 00:00:41,200
+Siden februar i år har Iran i stor grad hindret internasjonal skipstrafikk gjennom stredet.
+
+7
+00:00:41,720 --> 00:00:47,120
+Dette skjedde etter at USA og Israel angrep Iran tidligere i vinter.
+
+8
+00:00:47,940 --> 00:00:57,500
+Hormuzstredet er smalt – bare rundt 33 kilometer på det smaleste – men rundt 20 prosent av all olje i verden fraktes gjennom dette stredet.
+
+9
+00:00:58,080 --> 00:01:03,720
+Når stredet er stengt eller delvis stengt, blir det vanskeligere og dyrere å transportere olje.
+
+10
+00:01:04,360 --> 00:01:06,900
+Dette påvirker oljeprisen over hele verden.
+
+11
+00:01:07,600 --> 00:01:09,400
+Hvorfor er dette viktig for Norge?
+
+12
+00:01:10,080 --> 00:01:12,900
+Norge er en stor eksportør av olje og gass.
+
+13
+00:01:14,020 --> 00:01:24,820
+Høye oljepriser kan være bra for norsk økonomi på kort sikt, fordi staten tjener mer penger. Men høye oljepriser betyr også dyrere bensin og diesel for vanlige folk.
+
+14
+00:01:25,500 --> 00:01:29,260
+Og når oljeprisen svinger mye, skaper det usikkerhet i markedet.
+
+15
+00:01:29,880 --> 00:01:35,740
+Mange bedrifter i Norge er avhengige av stabile energipriser for å planlegge fremtiden.
+
+16
+00:01:36,560 --> 00:01:49,540
+Akkurat nå er drivstoffprisene i Norge historisk høye. Onsdag morgen meldte NRK at Arbeiderpartiet inviterer SV, Senterpartiet, Rødt og MDG til et møte om drivstoffsituasjonen.
+
+17
+00:01:50,100 --> 00:01:52,400
+Møtet skal holdes torsdag klokken 12.
+
+18
+00:01:53,320 --> 00:02:02,320
+Tuva Moflag fra Arbeiderpartiet, som leder finanskomiteen på Stortinget, sier at møtet handler om krigen i Midtøsten og situasjonen i energimarkedene.
+
+19
+00:02:03,260 --> 00:02:15,600
+Dette viser at norske politikere er bekymret for hvordan internasjonale konflikter påvirker prisene her hjemme. Hvis Hormuzstredet åpner igjen, kan det føre til lavere oljepriser globalt.
+
+20
+00:02:16,240 --> 00:02:19,840
+Det vil igjen kunne bety billigere drivstoff for norske forbrukere.
+
+21
+00:02:20,560 --> 00:02:25,560
+For mange nordmenn som er avhengige av bil i hverdagen, vil dette være svært velkomment.
+
+22
+00:02:26,220 --> 00:02:30,600
+Men mye avhenger av detaljene i avtalen. Er det en midlertidig avtale?
+
+23
+00:02:31,120 --> 00:02:32,120
+Hvor lenge varer den?
+
+24
+00:02:32,820 --> 00:02:34,340
+Vil Iran overholde den?
+
+25
+00:02:34,920 --> 00:02:36,960
+Disse spørsmålene er fortsatt ubesvarte.
+
+26
+00:02:37,740 --> 00:02:46,500
+Det eneste vi vet nå, er at forhandlingene ser ut til å gå fremover – og det er gode nyheter for en verden som har opplevd høye energipriser i flere måneder.
+
+27
+00:02:47,160 --> 00:02:56,160
+En gjenåpning av stredet kan også bidra til å stabilisere den globale økonomien, noe som er viktig for et lite, åpent land som Norge.
+
+28
+00:02:56,920 --> 00:03:14,720
+Natt til onsdag har nødetatene i Vestland hatt en travel periode med flere hendelser samtidig. Den mest dramatiske hendelsen skjedde i Damsgårdssundet i Bergen sentrum. Like før klokken fire onsdag morgen fikk nødetatene melding om brann i en båt som lå i båthavnen.
+
+29
+00:03:15,520 --> 00:03:18,600
+Brannvesenet rykket ut med mannskap fra to stasjoner.
+
+30
+00:03:19,620 --> 00:03:28,140
+Operasjonsleder Knut Dahl-Michelsen i Vest politidistrikt sier at det en periode var fare for at brannen skulle spre seg til andre båter.
+
+31
+00:03:28,960 --> 00:03:31,600
+Heldigvis fikk de raskt kontroll over situasjonen.
+
+32
+00:03:32,580 --> 00:03:34,860
+En kvinne var i båten da den begynte å brenne.
+
+33
+00:03:35,720 --> 00:03:41,220
+Hun kom seg ut av båten, men ble fraktet til legevakt med ambulanse for nærmere undersøkelser.
+
+34
+00:03:42,120 --> 00:03:43,760
+Båten er helt utbrent.
+
+35
+00:03:44,500 --> 00:03:50,820
+Politiet vet foreløpig ikke hva som startet brannen, men de har opprettet sak og skal undersøke brannårsaken.
+
+36
+00:03:52,540 --> 00:03:59,780
+Damsgårdssundet ligger sentralt i Bergen, nær Puddefjorden, og båthavnen der er populær blant båteiere i byen.
+
+37
+00:04:00,520 --> 00:04:05,320
+Omtrent samtidig, tirsdag kveld, fikk to turister problemer ved Hornelen i Bremanger kommune.
+
+38
+00:04:06,120 --> 00:04:11,480
+Hornelen er den høyeste sjøklippen i Europa, med en høyde på 860 meter over havet.
+
+39
+00:04:12,160 --> 00:04:19,640
+Det er et populært turmål for fjellturister, men turen kan være krevende. De to turistene kom bort fra stien da det ble mørkt.
+
+40
+00:04:20,340 --> 00:04:24,500
+De hadde bare lys på mobiltelefonene sine, og til slutt sto de helt nede i vannkanten.
+
+41
+00:04:25,400 --> 00:04:27,020
+Heldigvis ringte de etter hjelp.
+
+42
+00:04:27,540 --> 00:04:32,740
+Politiet vurderte situasjonen og bestemte at den beste løsningen var å sende redningsskøyta.
+
+43
+00:04:34,180 --> 00:04:42,320
+Redningsskøyta er et spesialfartøy som drives av Redningsselskapet, en frivillig organisasjon som redder liv langs norskekysten.
+
+44
+00:04:43,800 --> 00:04:50,020
+Den plukket opp turistene ved Hæleneset og fraktet dem trygt tilbake til stedet der de hadde parkert bilen.
+
+45
+00:04:50,360 --> 00:04:51,900
+Ingen ble skadet i hendelsen.
+
+46
+00:04:52,880 --> 00:04:58,400
+Denne historien minner oss om hvor viktig det er å være godt forberedt når man går på fjelltur.
+
+47
+00:04:59,120 --> 00:05:04,960
+Godt utstyr – som lommelykt, kart og kompass – kan gjøre en stor forskjell hvis noe går galt.
+
+48
+00:05:05,820 --> 00:05:17,420
+Dette er ikke den eneste turisthendelsen i Vestland den siste tiden. Bare dagen før, mandag, måtte en turist reddes fra Husedalen i Kinsarvik i Ullensvang kommune.
+
+49
+00:05:18,280 --> 00:05:23,820
+Husedalen er kjent for sine fire imponerende fossefall og er et populært turområde om sommeren.
+
+50
+00:05:24,520 --> 00:05:28,340
+Turisten var på en guidet tur og skadet foten etter et fall.
+
+51
+00:05:29,300 --> 00:05:33,780
+Luftambulanse, brannmannskap og ambulanse deltok i redningsaksjonen.
+
+52
+00:05:34,180 --> 00:05:38,020
+Personen ble fløyet til Haukeland universitetssykehus for behandling.
+
+53
+00:05:38,720 --> 00:05:47,400
+Sommeren er høysesong for turisme i Vestland, og nødetatene må ofte rykke ut for å hjelpe turgåere som har fått problemer.
+
+54
+00:05:48,080 --> 00:05:53,400
+Det er en viktig påminnelse om hvor vakkert – men også hvor krevende – vestlandsk natur kan være.
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  console.log('VTT cues loaded:', cues.length);
+  buildCueElements();
+  // Show first cue as indicator
+  if (cues.length > 0) {
+    const info = document.createElement('div');
+    info.style.cssText = 'font-size:0.75rem;color:#aaa;margin-bottom:8px;padding:0 14px;';
+    info.textContent = cues.length + ' avsnitt lastet';
+    textDisplay.insertBefore(info, textDisplay.firstChild);
+  }
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      // Scroll into view (commented: causes issues in WeChat browser)
+      // el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>
