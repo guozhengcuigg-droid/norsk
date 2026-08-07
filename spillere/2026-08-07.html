@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+    .player-card { position: relative; top: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="metadata"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"><p style="color:#888;font-size:0.85rem;">Laster tekst ...</p></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-08-07.mp3';
+const TITLE = 'Dagens nyheter – 7. august 2026';
+const DATE_STR = '2026-08-07';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:03,920 --> 00:00:09,420
+Lærdalstunnelen er 24,5 kilometer lang og går mellom Aurland og Lærdal i Vestland fylke.
+
+2
+00:00:10,120 --> 00:00:16,800
+Den ble åpnet i november 2000 etter fem års byggearbeid, og den er fortsatt verdens lengste veitunnel.
+
+3
+00:00:17,840 --> 00:00:23,640
+Tunnelen er en del av E16, en av de viktigste veiene mellom Østlandet og Vestlandet.
+
+4
+00:00:24,380 --> 00:00:36,540
+Hver dag kjører tusenvis av biler og lastebiler gjennom denne tunnelen, og den er helt avgjørende for både persontrafikk og godstransport mellom Norges to største byer, Bergen og Oslo.
+
+5
+00:00:37,700 --> 00:00:40,200
+Nå trenger tunnelen en stor oppgradering.
+
+6
+00:00:40,820 --> 00:00:47,460
+Siden 2015 har Statens vegvesen jobbet med å oppgradere over 200 riksveitunneler i hele Norge.
+
+7
+00:00:48,300 --> 00:00:55,340
+Målet er å møte dagens sikkerhetskrav – spesielt når det gjelder brannsikkerhet, ventilasjon og kontrollsystemer.
+
+8
+00:00:56,620 --> 00:01:02,020
+Lærdalstunnelen har allerede passert 25 år, og den er moden for en omfattende oppgradering.
+
+9
+00:01:02,920 --> 00:01:06,280
+Oppgraderingen skulle egentlig starte i september 2026.
+
+10
+00:01:07,320 --> 00:01:14,140
+Statens vegvesen hadde allerede lyst ut kontrakten i oktober 2025, og fire selskaper viste interesse.
+
+11
+00:01:15,040 --> 00:01:18,020
+Til slutt ble jobben gitt til Skanska og Vassbakk & Stol.
+
+12
+00:01:18,980 --> 00:01:22,320
+Kontrakten har en verdi på hele 1,6 milliarder kroner.
+
+13
+00:01:23,300 --> 00:01:27,640
+Dette er en av de største tunneloppgraderingene i norsk historie.
+
+14
+00:01:28,400 --> 00:01:30,800
+Men nå er planen satt på vent.
+
+15
+00:01:31,720 --> 00:01:38,120
+Ifølge NRK Vestland og nettstedet Anlegg.nå har selskapet OneCo klaget på tildelingen av kontrakten.
+
+16
+00:01:39,400 --> 00:01:42,820
+OneCo mener at de burde ha fått jobben, og de har tatt saken til retten.
+
+17
+00:01:43,320 --> 00:01:46,440
+Klagen skal behandles av Oslo tingrett i august.
+
+18
+00:01:47,840 --> 00:01:52,980
+Aurland kommune skriver på sine nettsider at oppstarten er avhengig av hva retten bestemmer.
+
+19
+00:01:53,640 --> 00:01:58,140
+Dette betyr at oppstarten er utsatt til tidligst november 2026.
+
+20
+00:01:59,400 --> 00:02:05,700
+Det er foreløpig uklart hvordan dette vil påvirke den totale tidsplanen for prosjektet.
+
+21
+00:02:06,340 --> 00:02:09,260
+Arbeidet i tunnelen skal uansett vare i mange år.
+
+22
+00:02:09,860 --> 00:02:15,200
+Når arbeidet først starter, blir tunnelen stengt om natten – mellom klokken 18.00 og 06.00.
+
+23
+00:02:17,420 --> 00:02:22,000
+Det blir egne bussordninger slik at folk fortsatt kan reise mellom Aurland og Lærdal.
+
+24
+00:02:23,360 --> 00:02:27,020
+Utrykningskjøretøy og legevakt får også egne ordninger for å slippe gjennom.
+
+25
+00:02:27,700 --> 00:02:39,200
+For dem som er avhengige av tunnelen til daglig pendling eller næringstransport, er dette en betydelig ulempe, men Statens vegvesen understreker at sikkerheten må prioriteres.
+
+26
+00:02:40,000 --> 00:02:42,520
+For folk som bor i Vestland, er dette en viktig sak.
+
+27
+00:02:43,260 --> 00:02:50,040
+E16 er hovedveien mellom Bergen og Oslo, og Lærdalstunnelen er et kritisk punkt på denne strekningen.
+
+28
+00:02:50,740 --> 00:02:58,700
+Uten tunnelen måtte bilister kjøre over fjellet, noe som tar mye lengre tid og er umulig om vinteren på grunn av snø og dårlig vær.
+
+29
+00:02:59,520 --> 00:03:04,220
+Tunnelen gjør det mulig å reise raskt og trygt mellom øst og vest hele året.
+
+30
+00:03:04,840 --> 00:03:12,140
+Når oppgraderingen først starter, vil den påvirke livene til mange mennesker – både pendlere, transportører og turister.
+
+31
+00:03:13,320 --> 00:03:17,140
+Næringslivet i regionen er også avhengig av at tunnelen fungerer godt.
+
+32
+00:03:18,200 --> 00:03:21,500
+Mange lastebiler med varer kjører gjennom tunnelen hver dag.
+
+33
+00:03:22,200 --> 00:03:28,480
+Mange håper derfor at rettssaken blir avgjort raskt, slik at arbeidet kan komme i gang så snart som mulig.
+
+34
+00:03:29,340 --> 00:03:35,040
+Statens vegvesen har sagt at de vil holde publikum oppdatert om framdriften i prosjektet.
+
+35
+00:03:35,760 --> 00:03:40,120
+Det er ikke bare i storbyer som Bergen og Oslo at studenter sliter med å finne bolig.
+
+36
+00:03:40,480 --> 00:03:47,700
+Nå melder avisen Sunnhordland at det er ventelister på studentboliger på Stord – for første gang på seks år.
+
+37
+00:03:49,460 --> 00:03:53,420
+Stord er en øykommune i Vestland, kjent for industri og maritim virksomhet.
+
+38
+00:03:54,300 --> 00:03:58,680
+Her ligger Høgskulen på Vestlandet (HVL) sin campus på Rommetveit.
+
+39
+00:03:59,400 --> 00:04:04,880
+Alle de 180 studentboligene ved campusen er nå leid ut, og ti personer står på venteliste.
+
+40
+00:04:05,620 --> 00:04:11,100
+Sammen, som er studentsamskipnaden i Bergen og omegn, eier og driver disse boligene.
+
+41
+00:04:11,780 --> 00:04:16,280
+Styreleder Sjur Selsvik i Sammen bekrefter at dette ikke har skjedd siden 2020.
+
+42
+00:04:18,200 --> 00:04:28,600
+Den gang var det også stor etterspørsel, men siden den gang har det alltid vært nok rom til alle som søkte. Hva er årsaken til det plutselige presset på studentboliger?
+
+43
+00:04:29,960 --> 00:04:32,560
+Avisen Sunnhordland peker på to hovedfaktorer.
+
+44
+00:04:33,280 --> 00:04:36,760
+For det første er det stor aktivitet i industrien i området.
+
+45
+00:04:38,020 --> 00:04:42,520
+Mange arbeidere kommer til Stord for å jobbe, og de leier boliger på det private markedet.
+
+46
+00:04:43,200 --> 00:04:47,720
+Dette gjør at det blir færre private utleieboliger tilgjengelig for studentene.
+
+47
+00:04:48,480 --> 00:05:00,900
+For det andre har Høgskulen på Vestlandet opplevd rekordhøy søkning i år, spesielt til sykepleierstudiet. HVL har flere studiesteder på Vestlandet, og sykepleierutdanningen er en av de mest populære.
+
+48
+00:05:01,760 --> 00:05:12,040
+Mange unge mennesker ønsker å bli sykepleiere, og Stord er et attraktivt studiested fordi det kombinerer god utdanning med nærhet til praksisplasser i helsesektoren.
+
+49
+00:05:12,980 --> 00:05:17,780
+Sjur Selsvik i Sammen er bekymret for situasjonen, men også optimistisk.
+
+50
+00:05:18,300 --> 00:05:23,140
+Han sier at de følger situasjonen nøye og vil gjøre det de kan for å hjelpe studentene.
+
+51
+00:05:24,140 --> 00:05:38,420
+Sammen vurderer nå om de skal bygge flere studentboliger på Stord, men det tar tid å planlegge og bygge. Inntil videre må noen studenter kanskje bo midlertidig hos venner eller pendle fra nabokommuner som Bømlo eller Fitjar.
+
+52
+00:05:39,240 --> 00:05:43,840
+Denne saken viser at presset på studentboliger ikke bare er et storbyfenomen.
+
+53
+00:05:44,460 --> 00:05:52,260
+Det handler også om regional utvikling, og om hvordan industrivekst kan påvirke lokalsamfunnet på uventede måter.
+
+54
+00:05:53,480 --> 00:05:59,980
+På den ene siden er industriaktivitet bra for lokalsamfunnet – det skaper arbeidsplasser og økonomisk vekst.
+
+55
+00:06:00,600 --> 00:06:04,980
+På den andre siden kan det gjøre det vanskeligere for studenter å finne et sted å bo.
+
+56
+00:06:06,140 --> 00:06:11,980
+Situasjonen på Stord er også interessant fordi den viser hvor viktig sykepleierutdanning er blitt i Norge.
+
+57
+00:06:12,560 --> 00:06:18,740
+Det er stor mangel på sykepleiere i hele landet, og mange studiesteder utvider kapasiteten sin.
+
+58
+00:06:19,360 --> 00:06:23,540
+Når flere unge velger å studere sykepleie, er det godt nytt for helsesektoren.
+
+59
+00:06:24,320 --> 00:06:28,960
+Men uten nok studentboliger kan det bli vanskelig å ta imot alle som vil studere.
+
+60
+00:06:29,760 --> 00:06:38,900
+For studentene som står på venteliste, er håpet at noen av de eksisterende beboerne flytter ut i løpet av semesteret, slik at de kan få et rom.
+
+61
+00:06:39,480 --> 00:06:44,380
+Sammen har lovet å følge situasjonen tett og hjelpe de studentene som trenger det mest.
+
+62
+00:06:45,720 --> 00:06:52,780
+Inntil videre er rådet til nye studenter å søke bolig så tidlig som mulig – og kanskje også vurdere å bo i nabokommunene.
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  console.log('VTT cues loaded:', cues.length);
+  buildCueElements();
+  // Show first cue as indicator
+  if (cues.length > 0) {
+    const info = document.createElement('div');
+    info.style.cssText = 'font-size:0.75rem;color:#aaa;margin-bottom:8px;padding:0 14px;';
+    info.textContent = cues.length + ' avsnitt lastet';
+    textDisplay.insertBefore(info, textDisplay.firstChild);
+  }
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      // Scroll into view (commented: causes issues in WeChat browser)
+      // el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>
