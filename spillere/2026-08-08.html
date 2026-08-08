@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+    .player-card { position: relative; top: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="metadata"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"><p style="color:#888;font-size:0.85rem;">Laster tekst ...</p></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-08-08.mp3';
+const TITLE = 'Dagens nyheter – 8. august 2026';
+const DATE_STR = '2026-08-08';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:01,840 --> 00:00:07,120
+Lørdag morgen skulle egentlig mange SAS-fly stå stille på bakken.
+
+2
+00:00:07,700 --> 00:00:12,980
+Rundt 500 kabinansatte i SAS skulle gå til streik fra klokken fire i dag tidlig.
+
+3
+00:00:13,820 --> 00:00:19,000
+Men natt til lørdag kom det en gladmelding: Fellesforbundet har avblåst streiken.
+
+4
+00:00:19,640 --> 00:00:24,120
+Det betyr at flyene går som normalt, og alle som skal reise kan puste lettet ut.
+
+5
+00:00:25,120 --> 00:00:26,740
+Hva var det egentlig som skjedde?
+
+6
+00:00:27,640 --> 00:00:31,560
+Fellesforbundet er fagforeningen til mange av de kabinansatte i SAS.
+
+7
+00:00:32,600 --> 00:00:36,260
+Kabinansatte er de som jobber inne i flyet og tar seg av passasjerene.
+
+8
+00:00:36,880 --> 00:00:43,240
+De serverer mat og drikke, sørger for sikkerheten om bord, og hjelper deg hvis du har spørsmål under reisen.
+
+9
+00:00:43,980 --> 00:00:47,360
+En fagforening jobber for å beskytte arbeidstakernes rettigheter.
+
+10
+00:00:48,320 --> 00:00:55,740
+Når de ansatte og ledelsen ikke blir enige om lønn eller arbeidsvilkår, kan fagforeningen sende et streikevarsel.
+
+11
+00:00:56,460 --> 00:00:59,100
+Det gjorde Fellesforbundet tidligere denne uken.
+
+12
+00:00:59,660 --> 00:01:01,460
+En streik er et sterkt virkemiddel.
+
+13
+00:01:02,080 --> 00:01:07,940
+Det betyr at de ansatte legger ned arbeidet for å presse arbeidsgiveren til å gi dem bedre betingelser.
+
+14
+00:01:08,800 --> 00:01:10,680
+Hvorfor ble streiken avblåst?
+
+15
+00:01:11,360 --> 00:01:14,520
+Det mest sannsynlige er at partene har kommet til enighet.
+
+16
+00:01:15,260 --> 00:01:22,780
+Kanskje har SAS-ledelsen gitt de kabinansatte bedre vilkår, eller kanskje har begge sider gitt litt for å finne en løsning.
+
+17
+00:01:23,620 --> 00:01:27,060
+Detaljene om den nye avtalen er foreløpig ikke offentliggjort.
+
+18
+00:01:27,900 --> 00:01:31,580
+Men uansett årsak er resultatet positivt for alle reisende.
+
+19
+00:01:32,220 --> 00:01:35,920
+For folk i Bergen og på Vestlandet er dette spesielt gode nyheter.
+
+20
+00:01:36,860 --> 00:01:46,240
+Bergen lufthavn Flesland er en av Norges travleste flyplasser. Mange SAS-fly går mellom Bergen og andre byer i Norge og Europa hver dag.
+
+21
+00:01:47,060 --> 00:01:48,960
+Sommeren er høysesong for reiser.
+
+22
+00:01:49,560 --> 00:01:53,720
+Mange er på vei hjem fra ferie, og andre skal akkurat dra på ferie.
+
+23
+00:01:54,420 --> 00:01:57,880
+En streik ville ha skapt lange køer, forsinkelser og kanselleringer.
+
+24
+00:01:58,640 --> 00:02:00,200
+Nå kan alle reisende slappe av.
+
+25
+00:02:01,000 --> 00:02:03,700
+Skal du fly med SAS i dag eller de neste dagene?
+
+26
+00:02:04,400 --> 00:02:06,020
+Da trenger du ikke å bekymre deg.
+
+27
+00:02:06,480 --> 00:02:08,260
+Flyet ditt går etter planen.
+
+28
+00:02:09,160 --> 00:02:18,440
+Dette viser også hvor viktig det er at arbeidsgivere og arbeidstakere kan forhandle og finne gode løsninger sammen, uten at det går ut over kundene.
+
+29
+00:02:19,020 --> 00:02:21,340
+For SAS selv er dette også en viktig seier.
+
+30
+00:02:22,720 --> 00:02:27,720
+Selskapet har hatt økonomiske problemer de siste årene og har jobbet hardt for å komme tilbake.
+
+31
+00:02:28,520 --> 00:02:35,280
+En streik midt i sommersesongen ville ha kostet selskapet mange millioner kroner og skadet omdømmet deres.
+
+32
+00:02:36,120 --> 00:02:38,620
+Nå kan SAS fortsette å bygge tillit hos kundene sine.
+
+33
+00:02:40,460 --> 00:02:47,060
+SAS er det største flyselskapet i Skandinavia, og mange reisende i Norge er avhengige av rutetilbudet deres.
+
+34
+00:02:47,760 --> 00:02:52,100
+Når konflikter som denne løses uten streik, er det godt nytt for alle parter.
+
+35
+00:02:52,780 --> 00:02:57,040
+Visste du at Erling Braut Haaland kan påvirke hva nordmenn kjøper i matbutikken?
+
+36
+00:02:58,340 --> 00:03:04,260
+En fersk rapport fra Landbruksdirektoratet viser at salget av norske gulrøtter har økt kraftig denne sommeren.
+
+37
+00:03:04,960 --> 00:03:07,240
+Produsentene kaller fenomenet for «Haaland-effekten».
+
+38
+00:03:07,740 --> 00:03:13,200
+Dette er en morsom historie om hvordan en kjent person kan endre vanene våre.
+
+39
+00:03:14,020 --> 00:03:15,940
+Hva er Haaland-effekten, og hvordan oppsto den?
+
+40
+00:03:17,240 --> 00:03:22,260
+Under fotball-VM tidligere i sommer dukket Haaland opp i flere TV-reklamer for Bama.
+
+41
+00:03:23,400 --> 00:03:26,980
+Bama er en stor norsk leverandør av frukt og grønnsaker.
+
+42
+00:03:28,060 --> 00:03:31,140
+I reklamefilmene kjørte Haaland truck og spiste gulrøtter.
+
+43
+00:03:31,880 --> 00:03:37,840
+Sammen med langrennsstjernen Johannes Høsflot Klæbo gjorde han grønnsaker både kule og morsomme.
+
+44
+00:03:38,520 --> 00:03:44,760
+Mange barn og unge så disse reklamene og tenkte: hvis Haaland spiser gulrøtter, vil jeg også spise gulrøtter.
+
+45
+00:03:46,040 --> 00:03:47,620
+Men det stopper ikke med reklamene.
+
+46
+00:03:48,240 --> 00:03:56,220
+I sosiale medier har det også dukket opp mange videoer av Haaland som spiser gulrøtter i bilen sin, på vei til trening eller kamp.
+
+47
+00:03:57,020 --> 00:03:59,960
+Disse videoene har blitt delt tusenvis av ganger.
+
+48
+00:04:00,540 --> 00:04:06,420
+Haaland er en av verdens beste fotballspillere, og han er et stort forbilde for unge mennesker i Norge.
+
+49
+00:04:07,000 --> 00:04:13,380
+Når han viser at sunt kosthold er en del av hverdagen hans, inspirerer han andre til å leve sunnere.
+
+50
+00:04:15,260 --> 00:04:18,460
+Landbruksdirektoratet melder at det ikke bare er gulrøtter som selger godt.
+
+51
+00:04:19,540 --> 00:04:24,600
+Også blomkål og andre norske sommergrønnsaker har høy omsetning i butikkene akkurat nå.
+
+52
+00:04:25,660 --> 00:04:35,660
+Direktoratet skriver i sin ukesrapport at mange nordmenn nå har kommet hjem fra sommerferie. Når hverdagen starter igjen, øker også salget av ferske, norske råvarer.
+
+53
+00:04:36,300 --> 00:04:39,040
+Det er bra for norske bønder og for norsk landbruk.
+
+54
+00:04:39,660 --> 00:04:47,220
+Selv om Haaland er fra Bryne i Rogaland og spiller for Manchester City i England, har han fortsatt stor påvirkning hjemme i Norge.
+
+55
+00:04:47,880 --> 00:04:50,700
+Han er en ambassadør for norsk fotball og norsk kultur.
+
+56
+00:04:51,560 --> 00:04:56,320
+Og nå kan vi også si at han er en uoffisiell ambassadør for norske gulrøtter.
+
+57
+00:04:57,200 --> 00:05:02,200
+Så neste gang du spiser en gulrot, kan du tenke på at kanskje Haaland har spist en akkurat som deg.
+
+58
+00:05:02,740 --> 00:05:03,320
+God appetitt!
+
+59
+00:05:04,500 --> 00:05:08,960
+Historien om Haaland-effekten er også en påminnelse om hvor viktig norsk landbruk er.
+
+60
+00:05:09,760 --> 00:05:13,180
+Norge er et land med mye fjell og lite dyrkbar jord.
+
+61
+00:05:13,940 --> 00:05:20,540
+Likevel produserer norske bønder mange gode råvarer, fra gulrøtter og poteter til kjøtt og melk.
+
+62
+00:05:21,600 --> 00:05:26,540
+Når forbrukerne velger norske produkter, støtter de både lokale bønder og det norske miljøet.
+
+63
+00:05:27,220 --> 00:05:34,020
+At en fotballstjerne kan bidra til dette på en så enkel og naturlig måte, er ganske imponerende.
+
+64
+00:05:34,600 --> 00:05:38,700
+Kanskje burde flere kjendiser tenke på hva slags påvirkning de har på forbruket vårt.
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  console.log('VTT cues loaded:', cues.length);
+  buildCueElements();
+  // Show first cue as indicator
+  if (cues.length > 0) {
+    const info = document.createElement('div');
+    info.style.cssText = 'font-size:0.75rem;color:#aaa;margin-bottom:8px;padding:0 14px;';
+    info.textContent = cues.length + ' avsnitt lastet';
+    textDisplay.insertBefore(info, textDisplay.firstChild);
+  }
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      // Scroll into view (commented: causes issues in WeChat browser)
+      // el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>
