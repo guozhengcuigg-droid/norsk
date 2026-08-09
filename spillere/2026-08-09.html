@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+    .player-card { position: relative; top: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="metadata"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"><p style="color:#888;font-size:0.85rem;">Laster tekst ...</p></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-08-09.mp3';
+const TITLE = 'Dagens nyheter – 9. august 2026';
+const DATE_STR = '2026-08-09';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:03,400 --> 00:00:08,000
+Bergen er en av Norges største studentbyer, men det er ikke lett å finne et sted å bo.
+
+2
+00:00:09,200 --> 00:00:17,500
+Nå har Studentsamskipnaden Sammen funnet en kreativ løsning: De har satt opp to brakkerigger på Møllendal, rett utenfor Bergen sentrum.
+
+3
+00:00:18,620 --> 00:00:23,760
+Lørdag denne helgen flyttet de første 88 studentene inn i de midlertidige boligene.
+
+4
+00:00:24,460 --> 00:00:29,760
+En av dem er Marius Skoglund, en 20 år gammel student fra Hamarøy i Nordland.
+
+5
+00:00:30,420 --> 00:00:33,680
+Han skal studere kroppsøving ved NLA Høgskolen i Bergen.
+
+6
+00:00:34,520 --> 00:00:37,620
+Marius hadde lett etter bolig overalt, men fant ingenting.
+
+7
+00:00:38,340 --> 00:00:49,500
+Enten var det for dyrt, eller så var det mange andre som også ville ha den samme leiligheten. «Jeg sjekket overalt, men det er veldig vanskelig, for enten så er det for dyrt,» forteller han til NRK.
+
+8
+00:00:50,240 --> 00:00:53,600
+Da han fikk tilbud om en brakkehybel, måtte han bare si ja.
+
+9
+00:00:54,520 --> 00:00:55,820
+«Jeg føler meg veldig heldig.
+
+10
+00:00:56,240 --> 00:00:58,760
+Hvis ikke hadde jeg måttet sove i en sal,» sier han.
+
+11
+00:00:59,580 --> 00:01:01,680
+Brakkene ble satt opp på bare fire måneder.
+
+12
+00:01:02,180 --> 00:01:06,740
+Fra ideen kom til brakkene var klare for innflytning, gikk det utrolig raskt.
+
+13
+00:01:07,480 --> 00:01:10,640
+Hver hybel er på åtte kvadratmeter og har eget bad.
+
+14
+00:01:11,340 --> 00:01:17,320
+I tillegg har studentene tilgang til fellesarealer, kjøkken, vaskerom og til og med badstue.
+
+15
+00:01:18,280 --> 00:01:25,060
+Månedsprisen er 5700 kroner, men strøm og internett kommer i tillegg. Interessen har vært enorm.
+
+16
+00:01:26,020 --> 00:01:27,180
+«Vi la dem ut en torsdag.
+
+17
+00:01:27,740 --> 00:01:32,800
+I løpet av helgen var de borte,» sier administrerende direktør i Sammen, Sonja Dyrkorn.
+
+18
+00:01:33,720 --> 00:01:37,600
+Dessverre er Marius langt fra alene om å slite med å finne bolig.
+
+19
+00:01:38,640 --> 00:01:43,540
+Ti dager før studiestart står over 17.000 studenter i boligkø nasjonalt.
+
+20
+00:01:44,440 --> 00:01:46,860
+Det er 921 flere enn på samme tid i fjor.
+
+21
+00:01:47,600 --> 00:01:49,740
+Presset er størst i Oslo og Bergen.
+
+22
+00:01:50,360 --> 00:01:55,140
+Per 1. august var det 5101 studenter i boligkø i Bergen alene.
+
+23
+00:01:55,820 --> 00:02:07,780
+Også leieprisene har økt kraftig det siste året. I Bergen har leieprisene steget med 12 prosent, og for et kollektiv ligger gjennomsnittsprisen på rundt 6500 kroner i måneden.
+
+24
+00:02:08,740 --> 00:02:14,380
+Leder i Norsk studentorganisasjon (NSO), Eva Franko Aas, er bekymret for situasjonen.
+
+25
+00:02:14,880 --> 00:02:31,280
+Hun synes det er bra at Sammen stiller opp raskt, men mener at brakker ikke kan være en langsiktig løsning. «Det er nesten til å bli paff av at vi nå må forsvare at studenter også fortjener et trygt, godt og rimelig sted å bo,» sier hun til NRK.
+
+26
+00:02:32,280 --> 00:02:39,240
+Aas peker på at utviklingen i leiemarkedet er skremmende, og at studentene nå bokstavelig talt må betale prisen.
+
+27
+00:02:39,920 --> 00:02:47,380
+Hun mener at løsningen må være å bygge flere permanente studentboliger, slik at presset på det private leiemarkedet blir mindre.
+
+28
+00:02:48,320 --> 00:02:51,100
+Sammen planlegger allerede flere brakkerigger.
+
+29
+00:02:52,040 --> 00:02:57,380
+De ser på muligheten for å sette opp 280 brakkehybler på Laksevåg utenfor Bergen sentrum.
+
+30
+00:02:58,340 --> 00:03:11,140
+Samtidig jobber de for å få på plass permanente studentboliger. De har fått leie tomten på Møllendal i to år, og er i dialog med Bergen kommune om å kunne utvikle flere permanente boliger på tomten.
+
+31
+00:03:12,160 --> 00:03:18,520
+For Marius og de 87 andre studentene som nå flytter inn, er brakkehyblene uansett en stor lettelse.
+
+32
+00:03:19,440 --> 00:03:24,200
+Om to dager starter fadderuken og studiene, og endelig har de et sted å kalle hjem.
+
+33
+00:03:25,140 --> 00:03:31,660
+Mens studentene flytter inn i nye brakker i Bergen, er stemningen en helt annen hos gruveselskapet Nordic Mining.
+
+34
+00:03:32,860 --> 00:03:40,040
+Selskapet, som har et av de største nye industriprosjektene på Vestlandet, opplever nå en alvorlig økonomisk krise.
+
+35
+00:03:40,820 --> 00:03:44,380
+Fredag stupte aksjen med hele 48,8 prosent på Oslo Børs.
+
+36
+00:03:45,540 --> 00:03:59,320
+Årsaken til krisen er at selskapet trenger ny kapital for å holde driften i gang. Nordic Mining opplyste i en børsmelding at de trenger mellom 95 og 140 millioner kroner for å drive ut november måned.
+
+37
+00:04:00,120 --> 00:04:04,160
+Uten disse pengene kan selskapet gå tomt for penger om bare én måned.
+
+38
+00:04:04,940 --> 00:04:11,220
+Ledelsen arbeider nå med flere alternativer for å skaffe mellom 100 og 150 millioner kroner.
+
+39
+00:04:11,720 --> 00:04:23,740
+Ett av alternativene er en emisjon, der selskapet henter inn nye penger ved å selge flere aksjer. I tillegg har selskapet bedt om utsettelse av en rentebetaling fra 6. august til 4. september.
+
+40
+00:04:24,580 --> 00:04:33,000
+Dette fører til at rentesatsen øker fra 12,5 til 15 prosent, noe som gjør situasjonen enda vanskeligere.
+
+41
+00:04:33,840 --> 00:04:38,840
+Nordic Mining driver med utvinning av rutil og granat ved Førdefjorden i Sunnfjord.
+
+42
+00:04:39,700 --> 00:04:46,060
+Dette er mineraler som brukes i mange industrielle produkter, for eksempel maling, plast og elektronikk.
+
+43
+00:04:46,800 --> 00:04:55,540
+Selskapet mener at prosjektet kan bli viktig for norsk mineralindustri, og at det kan bidra til at Europa blir mindre avhengig av importerte råvarer.
+
+44
+00:04:56,080 --> 00:05:01,840
+Men prosjektet har også møtt kraftig motstand, særlig fra miljøorganisasjoner og deler av fiskerinæringen.
+
+45
+00:05:02,600 --> 00:05:07,320
+Den største konflikten handler om at selskapet vil bruke deler av Førdefjorden som deponi for gruveavfall.
+
+46
+00:05:09,760 --> 00:05:14,720
+Miljøorganisasjonene frykter at dette kan skade livet i fjorden og ødelegge naturmangfoldet.
+
+47
+00:05:15,460 --> 00:05:21,160
+Tidligere i år vant Naturvernforbundet og Natur og Ungdom en historisk seier i Høyesterett.
+
+48
+00:05:22,460 --> 00:05:28,240
+Retten konkluderte med at tillatelsen som åpnet for gruvevirksomhet i Førdefjorden, ikke var gyldig.
+
+49
+00:05:28,960 --> 00:05:37,300
+Denne dommen har skapt stor usikkerhet rundt hele prosjektet, og det er en av grunnene til at selskapet nå sliter med å finne investorer.
+
+50
+00:05:38,440 --> 00:05:47,780
+Situasjonen reiser et viktig spørsmål for Norge: Skal vi prioritere tilgang på viktige mineraler, eller skal hensynet til sårbar natur veie tyngst?
+
+51
+00:05:48,860 --> 00:05:56,580
+Nordic Mining har allerede investert milliarder av kroner i Engebø-prosjektet, og mange arbeidsplasser står på spill.
+
+52
+00:05:57,620 --> 00:06:10,620
+Bare det siste året har aksjen falt med 90 prosent, og nå går selskapet inn i noen helt avgjørende uker. Dersom de lykkes med å hente inn ny kapital, kan opptrappingen ved Engebø fortsette.
+
+53
+00:06:11,200 --> 00:06:17,480
+Hvis ikke, kan konsekvensene bli store for både de ansatte og et av Norges mest omtalte gruveprosjekter.
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  console.log('VTT cues loaded:', cues.length);
+  buildCueElements();
+  // Show first cue as indicator
+  if (cues.length > 0) {
+    const info = document.createElement('div');
+    info.style.cssText = 'font-size:0.75rem;color:#aaa;margin-bottom:8px;padding:0 14px;';
+    info.textContent = cues.length + ' avsnitt lastet';
+    textDisplay.insertBefore(info, textDisplay.firstChild);
+  }
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      // Scroll into view (commented: causes issues in WeChat browser)
+      // el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>
