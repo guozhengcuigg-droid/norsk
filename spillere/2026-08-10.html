@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+    .player-card { position: relative; top: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="metadata"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"><p style="color:#888;font-size:0.85rem;">Laster tekst ...</p></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-08-10.mp3';
+const TITLE = 'Dagens nyheter – 10. august 2026';
+const DATE_STR = '2026-08-10';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:03,680 --> 00:00:07,840
+Mandag 10. august våknet mange i Bergen til en svært våt morgen.
+
+2
+00:00:08,600 --> 00:00:12,100
+Meteorologene sier at dette er årets våteste dag så langt.
+
+3
+00:00:12,880 --> 00:00:19,400
+I løpet av det siste døgnet har det kommet mellom 50 og 80 millimeter regn flere steder i regionen.
+
+4
+00:00:20,160 --> 00:00:23,920
+Det er like mye regn som det vanligvis kommer på en hel uke i august.
+
+5
+00:00:24,760 --> 00:00:34,260
+Regnet startet allerede søndag kveld, og det fortsatte gjennom hele natten. Mange veier i Bergen sentrum har store vannpytter, og flere kjellere har fått vann inn.
+
+6
+00:00:35,340 --> 00:00:39,480
+Brannvesenet har jobbet hele natten med å pumpe vann ut av oversvømte bygninger.
+
+7
+00:00:41,140 --> 00:00:45,460
+Meteorologen advarer om at det fortsatt kan komme mer regn i løpet av dagen.
+
+8
+00:00:46,400 --> 00:00:50,520
+Det kraftige regnet har også ført til jordras flere steder i Vestland.
+
+9
+00:00:51,340 --> 00:01:01,520
+I Jølster kommune gikk det et stort jordras som raste ned mot et vann søndag kveld. Ingen personer ble skadet, men raset var stort og dramatisk.
+
+10
+00:01:02,100 --> 00:01:08,520
+Også i Alver kommune nord for Bergen gikk det et jordras som var mellom 30 og 40 meter bredt.
+
+11
+00:01:09,240 --> 00:01:13,420
+I Bergen ble fire boliger evakuert på grunn av fare for jordras.
+
+12
+00:01:14,280 --> 00:01:20,180
+En av beboerne, Anders, forteller at han ble vekket av politiet som ringte og ba ham om å evakuere.
+
+13
+00:01:21,180 --> 00:01:25,220
+Han sier at det føltes litt uvirkelig å måtte forlate hjemmet sitt midt på natten.
+
+14
+00:01:25,620 --> 00:01:30,400
+Det dårlige været har også skapt store problemer for trafikken i regionen.
+
+15
+00:01:31,060 --> 00:01:34,480
+Flere veier er stengt eller har redusert fremkommelighet.
+
+16
+00:01:35,320 --> 00:01:48,700
+På fylkesvei 5032 Mauranger i Kvinnherad gikk det et steinsprang søndag kveld, og veien ble stengt i begge retninger. Veien var ventet å åpne igjen klokken 10.00 mandag formiddag.
+
+17
+00:01:49,300 --> 00:02:04,600
+På fylkesvei 5198 ved Nedre Sædal i Bergen er ett kjørefelt stengt på grunn av mye vann i veibanen. Vegtrafikksentralen dirigerer trafikken i det andre feltet, og reguleringen er ventet å ta slutt rundt klokken 12.30.
+
+18
+00:02:05,860 --> 00:02:12,040
+I Damsgårdstunnelen i Bergen stoppet en buss, og tunnelen måtte stenges kort tid for å berge bussen.
+
+19
+00:02:12,920 --> 00:02:16,940
+Mange bergensere har opplevd problemer hjemme på grunn av regnet.
+
+20
+00:02:17,480 --> 00:02:22,640
+En kvinne forteller til Bergensavisen at hun fikk sjokk da hun våknet og så hvor mye vann det var.
+
+21
+00:02:23,920 --> 00:02:29,560
+Andre forteller at strømmen gikk i hele huset, og at de måtte finne frem stearinlys og lommelykter.
+
+22
+00:02:30,440 --> 00:02:34,980
+En familie fikk kjelleren full av vann og beskriver situasjonen som veldig stressende.
+
+23
+00:02:36,000 --> 00:02:41,720
+Brannvesenet i Bergen sier at de har fått mange telefoner fra folk som trenger hjelp med vann i kjelleren.
+
+24
+00:02:42,400 --> 00:02:49,120
+De minner alle om å sjekke at sluk og avløp rundt huset er åpne og fri for løv og annet rusk.
+
+25
+00:02:49,780 --> 00:02:53,680
+Heldigvis ser det ut til at det verste regnet er over for denne gang.
+
+26
+00:02:55,000 --> 00:03:01,440
+Meteorologene sier at været skal bli bedre i løpet av mandagen, men at det fortsatt kan komme noen regnbyger på ettermiddagen.
+
+27
+00:03:03,100 --> 00:03:08,180
+Temperaturen ligger på rundt 12 grader, som er ganske typisk for Bergen i august.
+
+28
+00:03:08,780 --> 00:03:14,120
+For resten av uken er det meldt lettere vær med mulighet for sol på onsdag og torsdag.
+
+29
+00:03:15,040 --> 00:03:19,860
+Kommunen oppfordrer alle til å være forsiktige og holde seg oppdatert på værmeldingen.
+
+30
+00:03:20,580 --> 00:03:26,200
+Hvis du bor i et område med fare for jordras, bør du følge med på informasjon fra kommunen.
+
+31
+00:03:26,840 --> 00:03:31,700
+Tidlig mandag morgen skjedde det en dramatisk ulykke i Os i Bjørnafjorden kommune.
+
+32
+00:03:32,760 --> 00:03:38,940
+Klokken 06.45 fikk nødetatene melding om at en stor båt hadde kollidert med kaia ved Hamnevegen.
+
+33
+00:03:39,600 --> 00:03:44,880
+Båten er en fraktebåt på hele 58 meter, og den hadde en gravemaskin om bord.
+
+34
+00:03:45,880 --> 00:03:50,040
+Det var en nabo i området som varslet 110 Vest om hendelsen.
+
+35
+00:03:50,980 --> 00:03:56,920
+Naboen fortalte at hun hørte et høyt smell og så at en stor båt hadde kjørt rett inn i kaia.
+
+36
+00:03:57,700 --> 00:04:03,960
+Heldigvis var det ingen personer som ble skadet i sammenstøtet, men det ble store materielle skader på brygga.
+
+37
+00:04:05,200 --> 00:04:07,520
+Nødetatene rykket raskt ut til stedet.
+
+38
+00:04:08,120 --> 00:04:12,540
+Politiet, ambulanse og brannvesen var fremme kort tid etter at meldingen kom inn.
+
+39
+00:04:13,740 --> 00:04:22,200
+Operasjonsleder Tore-Andre Brakstad i Vest politidistrikt bekrefter at det ikke er personskade, men at det er betydelige skader på trebrygga.
+
+40
+00:04:23,680 --> 00:04:28,300
+110 Vest var også i kontakt med Hovedredningssentralen gjennom en såkalt SAR-varsling.
+
+41
+00:04:28,920 --> 00:04:32,980
+SAR står for "Search and Rescue", altså søk og redning på norsk.
+
+42
+00:04:33,580 --> 00:04:38,540
+Heldigvis var det ikke behov for noen redningsaksjon, siden ingen personer var i fare.
+
+43
+00:04:39,640 --> 00:04:42,900
+Nødetatene jobber nå med å sikre området rundt ulykkesstedet.
+
+44
+00:04:44,280 --> 00:04:47,400
+Fraktebåten er en norsk båt ifølge opplysninger fra 110 Vest.
+
+45
+00:04:48,820 --> 00:04:53,260
+Den er 58 meter lang, noe som er omtrent like langt som en halv fotballbane.
+
+46
+00:04:53,860 --> 00:05:01,300
+Om bord i båten var det en gravemaskin, men det er ikke kjent hvorfor båten hadde en gravemaskin eller hva oppdraget var.
+
+47
+00:05:02,200 --> 00:05:06,340
+Det er foreløpig uklart hva som var årsaken til at båten kolliderte med kaia.
+
+48
+00:05:07,180 --> 00:05:11,380
+Politiet vil undersøke hendelsen nærmere for å finne ut hva som skjedde.
+
+49
+00:05:12,140 --> 00:05:18,780
+Det kan være flere mulige årsaker, for eksempel teknisk svikt, menneskelig feil eller vanskelige værforhold.
+
+50
+00:05:19,600 --> 00:05:27,360
+Mandag morgen var det fortsatt mye regn i området, men vinden var ikke spesielt sterk. Skadene på kaia er omfattende.
+
+51
+00:05:28,620 --> 00:05:33,300
+Trebrygga har fått store skader etter sammenstøtet med den 58 meter lange båten.
+
+52
+00:05:34,000 --> 00:05:40,240
+Det er foreløpig ikke klart hvor mye det vil koste å reparere kaia, men det vil trolig bli en stor regning.
+
+53
+00:05:40,760 --> 00:05:44,560
+Kommunen og politiet jobber nå med å kartlegge skadeomfanget.
+
+54
+00:05:44,960 --> 00:05:48,040
+Det er også usikkert hvor lenge kaia vil være stengt.
+
+55
+00:05:48,900 --> 00:05:52,620
+For lokalbefolkningen i Os er dette en uvanlig hendelse.
+
+56
+00:05:53,480 --> 00:06:00,140
+Området ved Hamnevegen er normalt et rolig sted, og det er sjelden at slike store båter har problemer her.
+
+57
+00:06:00,820 --> 00:06:05,440
+Mange naboer kom ut for å se hva som hadde skjedd etter at de hørte smellet.
+
+58
+00:06:06,140 --> 00:06:08,820
+Politiet har startet etterforskning av hendelsen.
+
+59
+00:06:09,460 --> 00:06:16,160
+De vil snakke med mannskapet om bord i båten for å få mer informasjon om hva som skjedde i minuttene før kollisjonen.
+
+60
+00:06:17,040 --> 00:06:21,700
+Statens havarikommisjon kan også bli involvert hvis skadene er alvorlige nok.
+
+61
+00:06:22,820 --> 00:06:26,900
+Båten ligger fortsatt ved kaia, og det er uklart når den kan flyttes.
+
+62
+00:06:27,580 --> 00:06:30,660
+Det viktigste er at ingen personer ble skadet.
+
+63
+00:06:31,460 --> 00:06:37,740
+Hendelsen viser hvor viktig det er at båter følger sikkerhetsrutinene, spesielt når de skal legge til kai.
+
+64
+00:06:38,520 --> 00:06:45,000
+For beboerne i Os var dette en dramatisk start på mandagen, men heldigvis endte det ikke med personskader.
+
+65
+00:06:46,600 --> 00:06:49,440
+Nå venter alle på svar om hva som egentlig forårsaket ulykken.
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  console.log('VTT cues loaded:', cues.length);
+  buildCueElements();
+  // Show first cue as indicator
+  if (cues.length > 0) {
+    const info = document.createElement('div');
+    info.style.cssText = 'font-size:0.75rem;color:#aaa;margin-bottom:8px;padding:0 14px;';
+    info.textContent = cues.length + ' avsnitt lastet';
+    textDisplay.insertBefore(info, textDisplay.firstChild);
+  }
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      // Scroll into view (commented: causes issues in WeChat browser)
+      // el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>
