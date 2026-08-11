@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+    .player-card { position: relative; top: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="metadata"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"><p style="color:#888;font-size:0.85rem;">Laster tekst ...</p></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-08-11.mp3';
+const TITLE = 'Dagens nyheter – 11. august 2026';
+const DATE_STR = '2026-08-11';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:02,800 --> 00:00:04,120
+Norge har mange sauer.
+
+2
+00:00:04,760 --> 00:00:10,900
+Hver sommer går omtrent to millioner sauer ute på beite i fjellet og i skogen.
+
+3
+00:00:11,880 --> 00:00:16,380
+Dessverre blir noen av dem drept av ville dyr som bjørn, ulv, gaupe og jerv.
+
+4
+00:00:16,940 --> 00:00:18,400
+Men i år er det annerledes.
+
+5
+00:00:18,940 --> 00:00:26,700
+Statens naturoppsyn (SNO) har undersøkt hvor mange sauer som har blitt drept av rovdyr så langt i år, og tallene er svært positive.
+
+6
+00:00:27,760 --> 00:00:31,600
+SNO er en statlig etat som overvåker naturen i Norge.
+
+7
+00:00:32,320 --> 00:00:38,900
+Per 1. august 2026 har SNO bekreftet at 489 sauer har blitt drept av rovdyr i Norge.
+
+8
+00:00:39,620 --> 00:00:43,760
+Dette er det nest laveste tallet siden tellingen startet i 2002.
+
+9
+00:00:44,660 --> 00:00:54,960
+For å sette det i perspektiv: Det har blitt meldt inn totalt 1230 sauer som enten var skadet eller døde, der rovdyr kunne være årsaken.
+
+10
+00:00:55,600 --> 00:01:02,560
+Men etter grundige undersøkelser har SNO konkludert med at bare 489 av dem faktisk ble angrepet av rovdyr.
+
+11
+00:01:03,420 --> 00:01:07,360
+De andre sauene døde av andre årsaker, som sykdom eller ulykker.
+
+12
+00:01:08,360 --> 00:01:10,520
+Hvorfor er tallene så lave i år?
+
+13
+00:01:11,240 --> 00:01:16,200
+Ifølge Miljødirektoratet er det særlig færre angrep fra bjørn og gaupe enn tidligere.
+
+14
+00:01:16,860 --> 00:01:18,380
+Dette kan skyldes flere ting.
+
+15
+00:01:18,900 --> 00:01:25,880
+For det første har myndighetene gitt tillatelse til å skyte noen rovdyr i områder der det er mange sauer.
+
+16
+00:01:26,680 --> 00:01:32,060
+For det andre har mange bønder blitt flinkere til å bruke gjerder og andre metoder for å beskytte sauene sine.
+
+17
+00:01:32,640 --> 00:01:37,660
+Noen bønder bruker også vokterhunder som passer på sauene mens de går ute i fjellet.
+
+18
+00:01:38,360 --> 00:01:41,660
+Det er imidlertid ikke bare gode nyheter for alle rovdyrarter.
+
+19
+00:01:42,230 --> 00:01:48,160
+Mens bjørn og gaupe har tatt færre sauer, har jerv, ørn og ulv tatt noe mer sau enn i fjor.
+
+20
+00:01:48,860 --> 00:02:01,820
+Jerv er et dyr som er spesielt vanskelig å beskytte sauene mot, fordi den er liten og rask og kan komme seg gjennom gjerder. Ørn kan angripe lam fra luften, og ulv jakter ofte i flokk.
+
+21
+00:02:02,420 --> 00:02:08,320
+Likevel er det totale antallet angrep fortsatt veldig lavt sammenlignet med tidligere år.
+
+22
+00:02:08,780 --> 00:02:12,820
+For sauebøndene betyr dette mindre økonomisk tap og mindre stress.
+
+23
+00:02:13,580 --> 00:02:17,760
+Å miste sauer til rovdyr er ikke bare trist, det koster også penger.
+
+24
+00:02:18,700 --> 00:02:27,140
+Bøndene får erstatning fra staten for dyr som blir drept av rovdyr, men det er likevel bedre for alle når færre sauer blir drept.
+
+25
+00:02:28,200 --> 00:02:34,300
+Sauehold er en viktig del av norsk landbruk og kultur, spesielt i Vestlandet og andre fjellområder.
+
+26
+00:02:35,020 --> 00:02:39,400
+Dette er en positiv utvikling for både natur, dyr og mennesker.
+
+27
+00:02:40,380 --> 00:02:45,800
+Unge mennesker som verken jobber eller går på skole har lenge vært en utfordring i Norge.
+
+28
+00:02:46,720 --> 00:02:52,780
+Når unge står utenfor arbeidsliv og utdanning, kan det føre til mange problemer senere i livet.
+
+29
+00:02:53,500 --> 00:03:02,120
+Det kan bli vanskeligere å få jobb, man kan få dårligere økonomi, og det kan påvirke den psykiske helsen. Men nå kommer det gode nyheter fra Nav.
+
+30
+00:03:02,660 --> 00:03:06,420
+Nye tall viser at andelen unge utenfor har gått ned.
+
+31
+00:03:07,360 --> 00:03:16,180
+Konkret viser tallene at 4000 færre unge var utenfor jobb eller utdanning ved utgangen av 2025 sammenlignet med 2024.
+
+32
+00:03:17,540 --> 00:03:22,700
+Dette tilsvarer 15,6 prosent av alle unge mellom 20 og 29 år.
+
+33
+00:03:23,880 --> 00:03:29,660
+Det er fortsatt en ganske stor gruppe – over 100 000 mennesker – men trenden går i riktig retning.
+
+34
+00:03:30,560 --> 00:03:37,860
+Regjeringen har jobbet aktivt med å få flere unge inn i arbeidslivet eller utdanningssystemet, og det ser ut til å gi resultater.
+
+35
+00:03:38,780 --> 00:03:42,620
+Dette er viktig både for den enkelte og for samfunnet som helhet.
+
+36
+00:03:43,820 --> 00:03:46,220
+Hva er årsaken til at færre unge står utenfor?
+
+37
+00:03:47,020 --> 00:03:48,760
+Det er flere faktorer som spiller inn.
+
+38
+00:03:49,300 --> 00:03:52,820
+En viktig grunn er at arbeidsmarkedet i Norge er sterkt for tiden.
+
+39
+00:03:53,720 --> 00:03:58,300
+Det betyr at det er mange ledige jobber, spesielt innen helse, teknologi og bygg.
+
+40
+00:03:58,800 --> 00:04:03,300
+Når det er lettere å finne jobb, er det også flere som kommer seg inn på arbeidsmarkedet.
+
+41
+00:04:04,140 --> 00:04:12,420
+I tillegg har Nav og andre offentlige etater styrket innsatsen for å hjelpe unge med å finne arbeid eller riktig utdanning.
+
+42
+00:04:13,140 --> 00:04:16,540
+De tilbyr blant annet veiledning, kurs og praksisplasser.
+
+43
+00:04:17,860 --> 00:04:24,240
+Likevel er det viktig å huske at den største enkeltårsaken til at unge står utenfor fortsatt er helseproblemer.
+
+44
+00:04:24,960 --> 00:04:29,040
+Mange unge sliter med psykiske helseplager som angst og depresjon.
+
+45
+00:04:30,100 --> 00:04:34,160
+Dette gjør det vanskelig for dem å fullføre utdanning eller holde på en jobb.
+
+46
+00:04:35,420 --> 00:04:41,540
+Sykefraværet i Norge har også økt etter pandemien, noe som betyr at flere sliter med helsen sin.
+
+47
+00:04:42,380 --> 00:04:50,200
+Det er derfor viktig at samfunnet fortsetter å jobbe med både fysisk og psykisk helse blant unge, og at hjelpen er lett tilgjengelig.
+
+48
+00:04:50,760 --> 00:04:55,460
+Det er også verdt å merke seg at det er forskjeller mellom ulike grupper av unge.
+
+49
+00:04:56,460 --> 00:05:04,020
+For eksempel har innvandrerungdom ofte større utfordringer med å komme inn på arbeidsmarkedet enn unge med norskfødte foreldre.
+
+50
+00:05:04,780 --> 00:05:09,580
+Unge som har droppet ut av videregående skole har også større risiko for å stå utenfor.
+
+51
+00:05:11,340 --> 00:05:15,640
+Derfor er det viktig med målrettede tiltak som treffer de gruppene som trenger mest hjelp.
+
+52
+00:05:16,340 --> 00:05:24,740
+Målet er å gi alle unge en reell mulighet til å delta i samfunnet, enten gjennom jobb, utdanning eller andre meningsfulle aktiviteter.
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  console.log('VTT cues loaded:', cues.length);
+  buildCueElements();
+  // Show first cue as indicator
+  if (cues.length > 0) {
+    const info = document.createElement('div');
+    info.style.cssText = 'font-size:0.75rem;color:#aaa;margin-bottom:8px;padding:0 14px;';
+    info.textContent = cues.length + ' avsnitt lastet';
+    textDisplay.insertBefore(info, textDisplay.firstChild);
+  }
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      // Scroll into view (commented: causes issues in WeChat browser)
+      // el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>
