@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+    .player-card { position: relative; top: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="metadata"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"><p style="color:#888;font-size:0.85rem;">Laster tekst ...</p></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-08-13.mp3';
+const TITLE = 'Dagens nyheter – 13. august 2026';
+const DATE_STR = '2026-08-13';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:02,600 --> 00:00:15,120
+Politiet i Bergen etterforsker nå en alvorlig sak fra et populært lekeland for barn. En voksen mann har status som mistenkt etter en konfrontasjon med mindreårige på Leos Lekeland på Kokstad i Bergen.
+
+2
+00:00:16,060 --> 00:00:28,460
+Hendelsen skal ha skjedd søndag, og saken har fått mye oppmerksomhet fordi den handler om både vold og rasisme. Leos Lekeland er et stort innendørs lekeland hvor mange familier med barn tilbringer tid sammen.
+
+3
+00:00:29,540 --> 00:00:35,340
+Kokstad ligger sør i Bergen, nær Flesland og hovedkontorene til flere store selskaper.
+
+4
+00:00:36,340 --> 00:00:40,160
+Ifølge moren til barna skal mannen ha dyttet en elleve år gammel jente.
+
+5
+00:00:41,020 --> 00:00:45,300
+Han skal også ha sagt til jenta at hun skulle «dra tilbake dit hun kom fra».
+
+6
+00:00:46,100 --> 00:00:53,120
+Dette er et utsagn som ofte brukes som rasistisk, fordi det sier at en person ikke hører hjemme i Norge.
+
+7
+00:00:53,940 --> 00:00:58,460
+Moren forteller at hun og barna ble både redde og lei seg etter hendelsen.
+
+8
+00:00:59,040 --> 00:01:04,180
+Slike ord kan gjøre veldig vondt, særlig for barn som er født og oppvokst i Norge.
+
+9
+00:01:05,400 --> 00:01:10,700
+Da storesøsteren begynte å filme mannen med telefonen sin, skal han ha fortsatt med truende ord.
+
+10
+00:01:11,440 --> 00:01:19,300
+Ifølge moren uttalte mannen at «ellers ryker du rett tilbake til Afrika», før han skal ha slått tenåringen i ansiktet.
+
+11
+00:01:19,820 --> 00:01:26,920
+Dette gjorde hendelsen enda mer alvorlig, fordi det nå handler om både verbale trusler og fysisk vold mot et barn.
+
+12
+00:01:27,860 --> 00:01:34,540
+Å filme en slik situasjon kan være viktig som dokumentasjon, men det gjorde også mannen sint, ifølge moren.
+
+13
+00:01:35,320 --> 00:01:37,500
+Politiet ser svært alvorlig på saken.
+
+14
+00:01:38,260 --> 00:01:43,620
+De etterforsker den som en fysisk konfrontasjon og som mulige straffbare uttalelser.
+
+15
+00:01:44,280 --> 00:01:49,180
+Det betyr at politiet skal finne ut om det som ble sagt, er ulovlig etter norsk lov.
+
+16
+00:01:49,980 --> 00:01:58,720
+Rasisme og hatytringer er nemlig forbudt i Norge, og slike saker kan få rettslige konsekvenser for den som har sagt eller gjort noe galt.
+
+17
+00:01:59,800 --> 00:02:11,340
+Hatytringer er ord eller utsagn som angriper en person fordi vedkommende tilhører en bestemt gruppe, for eksempel på grunn av hudfarge, religion eller opprinnelse.
+
+18
+00:02:12,460 --> 00:02:17,760
+I tiden framover skal politiet gå gjennom videomaterialet som storesøsteren filmet.
+
+19
+00:02:18,540 --> 00:02:22,520
+De skal også snakke med vitner og med de som var til stede på lekelandet.
+
+20
+00:02:23,700 --> 00:02:28,420
+Saken er fortsatt under etterforskning, og mannen har foreløpig status som mistenkt.
+
+21
+00:02:29,040 --> 00:02:31,100
+Det betyr at han ikke er dømt for noe ennå.
+
+22
+00:02:31,860 --> 00:02:36,780
+Norsk lov sier at alle skal behandles som uskyldige til det motsatte er bevist.
+
+23
+00:02:37,500 --> 00:02:43,080
+Denne regelen kalles uskyldspresumsjonen, og den er viktig i et rettssamfunn som Norge.
+
+24
+00:02:43,900 --> 00:02:49,240
+Saker som denne vekker ofte en stor debatt i Norge om hvordan vi behandler hverandre.
+
+25
+00:02:49,960 --> 00:02:56,700
+Mange mener at voksne har et spesielt ansvar for å være gode rollemodeller når barn er til stede.
+
+26
+00:02:57,360 --> 00:03:04,080
+Et lekeland skal være et trygt og hyggelig sted for familier, og derfor reagerer mange sterkt når noe slikt skjer.
+
+27
+00:03:05,160 --> 00:03:14,820
+Det er også en påminnelse om at rasisme dessverre fortsatt finnes i det norske samfunnet, og at det er viktig å si ifra når man opplever eller ser noe galt.
+
+28
+00:03:15,860 --> 00:03:20,100
+I natt ble det satt i gang en redningsaksjon i fjellet på Sognefjellet og Jotunheimen.
+
+29
+00:03:20,660 --> 00:03:28,060
+Politiet ble kontaktet klokka 21.30 i går kveld av en norsk turist i tjueårene som hadde kommet i trøbbel på tur.
+
+30
+00:03:29,480 --> 00:03:34,340
+Ifølge politiet skulle mannen bare drikke vann, men så gikk han bort fra sekken sin.
+
+31
+00:03:35,100 --> 00:03:38,300
+Da han kom tilbake, klarte han ikke å finne den igjen.
+
+32
+00:03:39,380 --> 00:03:44,180
+Sognefjellet ligger i Luster kommune og er kjent for vakker, men krevende natur.
+
+33
+00:03:45,060 --> 00:03:48,780
+I sekken lå viktige ting som mat, lys og ekstra klær.
+
+34
+00:03:49,600 --> 00:03:54,500
+Uten disse tingene kan det være farlig å være i fjellet, særlig om natten og i kaldt vær.
+
+35
+00:03:55,600 --> 00:03:58,420
+Turisten var på en kjent posisjon sør for Liabreen.
+
+36
+00:03:59,280 --> 00:04:06,780
+Da politiet fikk meldingen, ble det derfor bestemt at de skulle sette i gang en redningsaksjon for å hjelpe mannen trygt ned fra fjellet.
+
+37
+00:04:07,560 --> 00:04:15,660
+En redningsaksjon er en organisert innsats der politi, Røde Kors og andre hjelpemannskaper jobber sammen for å redde mennesker i nød.
+
+38
+00:04:16,820 --> 00:04:27,480
+Klokka 05.34 om morgenen meldte politiet at turisten var trygt plassert på en hytte som tilhører Den Norske Turistforening, ofte kalt DNT.
+
+39
+00:04:29,300 --> 00:04:34,940
+DNT driver mange hytter i den norske naturen, og de er åpne for turgåere over hele landet.
+
+40
+00:04:35,720 --> 00:04:40,120
+Det var en stor lettelse at mannen hadde kommet seg til hytta og var i sikkerhet.
+
+41
+00:04:41,200 --> 00:04:48,320
+Mange nordmenn bruker DNT-hyttene når de går på tur, og de fleste hyttene ligger langs kjente turstier i fjellet.
+
+42
+00:04:49,120 --> 00:04:51,040
+Men redningsaksjonen fikk også et problem.
+
+43
+00:04:51,740 --> 00:05:03,240
+De krevende forholdene i området gjorde at en frivillig fra Røde Kors skadet ankelen sin. Personen hadde vært med på mange aksjoner i løpet av sommeren, og nå klarte ikke ankelen mer.
+
+44
+00:05:04,140 --> 00:05:10,900
+Klokka 07.35 opplyste Røde Kors at medarbeideren deres ble hentet av et redningshelikopter for å få hjelp.
+
+45
+00:05:11,740 --> 00:05:19,020
+Røde Kors er en frivillig organisasjon som stiller opp for å hjelpe folk i nød, både i fjellet og i andre situasjoner.
+
+46
+00:05:20,320 --> 00:05:24,780
+Denne hendelsen minner oss om hvor viktig det er å holde orden på utstyret sitt i fjellet.
+
+47
+00:05:25,840 --> 00:05:32,660
+Selv en kort tur bort fra sekken kan skape store problemer, fordi været og forholdene kan endre seg raskt.
+
+48
+00:05:33,600 --> 00:05:38,660
+Det er derfor lurt å alltid ha sekken med seg, eller i det minste vite nøyaktig hvor den ligger.
+
+49
+00:05:39,600 --> 00:05:42,700
+Det er også smart å ha en plan og fortelle andre hvor man går.
+
+50
+00:05:44,140 --> 00:05:51,520
+Redningsmannskaper som Røde Kors gjør en viktig jobb for å hjelpe folk i nød, men de risikerer også sin egen helse når de rykker ut.
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  console.log('VTT cues loaded:', cues.length);
+  buildCueElements();
+  // Show first cue as indicator
+  if (cues.length > 0) {
+    const info = document.createElement('div');
+    info.style.cssText = 'font-size:0.75rem;color:#aaa;margin-bottom:8px;padding:0 14px;';
+    info.textContent = cues.length + ' avsnitt lastet';
+    textDisplay.insertBefore(info, textDisplay.firstChild);
+  }
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      // Scroll into view (commented: causes issues in WeChat browser)
+      // el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>
