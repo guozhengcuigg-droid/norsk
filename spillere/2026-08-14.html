@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+    .player-card { position: relative; top: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="metadata"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"><p style="color:#888;font-size:0.85rem;">Laster tekst ...</p></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-08-14.mp3';
+const TITLE = 'Dagens nyheter – 14. august 2026';
+const DATE_STR = '2026-08-14';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:03,480 --> 00:00:11,620
+Selskapet Bluefjords kjøper Årdal Næringssenter for å bygge et nytt datasenter for kunstig intelligens, som vi ofte kaller KI.
+
+2
+00:00:12,400 --> 00:00:23,320
+Selskapet skal investere om lag én milliard norske kroner i prosjektet. Det skriver avisen Sogn Avis, og NRK Vestland forteller også om saken.
+
+3
+00:00:24,280 --> 00:00:31,180
+Etableringen skal gi rundt 50 nye arbeidsplasser i kommunen, og det er store nyheter for en liten bygd.
+
+4
+00:00:32,060 --> 00:00:35,780
+Et datasenter er en stor bygning som er full av datamaskiner.
+
+5
+00:00:36,680 --> 00:00:42,840
+Disse datamaskinene kalles servere, og de lagrer informasjon og gjør beregninger for kunder over hele verden.
+
+6
+00:00:44,080 --> 00:00:52,780
+Kunstig intelligens trenger veldig mange servere, fordi KI-systemer bruker enormt mye datakraft når de skal lære og svare på spørsmål.
+
+7
+00:00:53,620 --> 00:00:58,620
+Derfor bygger mange selskaper nå nye datasentre i mange land, også i Norge.
+
+8
+00:00:59,840 --> 00:01:03,180
+Årdal er en liten kommune som ligger innerst i Sognefjorden.
+
+9
+00:01:03,880 --> 00:01:11,260
+Mange kjenner Årdal på grunn av Hydro og produksjonen av aluminium, som har vært hjørnesteinsbedriften i bygda i mange tiår.
+
+10
+00:01:12,440 --> 00:01:17,280
+Men tung industri har blitt mer automatisert, og folketallet har gått ned de siste årene.
+
+11
+00:01:17,880 --> 00:01:21,560
+Flere unge flytter bort for å finne jobb og utdanning andre steder.
+
+12
+00:01:22,340 --> 00:01:26,880
+Derfor er nyheten om 50 nye arbeidsplasser svært godt mottatt i kommunen.
+
+13
+00:01:27,580 --> 00:01:37,660
+Sogn har en stor fordel når det gjelder datasentre: Det finnes mye fornybar kraft i regionen. Vannkraft fra fjellene gir strøm som er ren og nesten uten forurensning.
+
+14
+00:01:38,480 --> 00:01:45,720
+Datasentre bruker mye elektrisitet hele døgnet, så det er viktig at strømmen er stabil, billig og miljøvennlig.
+
+15
+00:01:46,860 --> 00:01:55,540
+Bluefjords har allerede erfaring med datasentre i regionen, og selskapet ser at forholdene ligger godt til rette for å vokse videre.
+
+16
+00:01:56,860 --> 00:02:00,320
+Selskapet leter allerede etter sin første lokale ansatte.
+
+17
+00:02:01,060 --> 00:02:05,580
+Det viser at planene er konkrete, og at etableringen kan skje raskt.
+
+18
+00:02:06,260 --> 00:02:11,860
+For Årdal kan et datasenter bety nytt liv i en bygd som trenger flere folk og flere jobber.
+
+19
+00:02:12,560 --> 00:02:19,180
+Lokale politikere er også positive, så lenge prosjektet gir arbeidsplasser og noe tilbake til fellesskapet.
+
+20
+00:02:19,940 --> 00:02:22,080
+Likevel er det noen som stiller spørsmål.
+
+21
+00:02:22,860 --> 00:02:39,840
+Datasentre bruker mye strøm, og noen mener at strømmen heller burde brukes til annen industri som skaper flere jobber per kilowattime. Andre peker på at fornybar kraft er noe Norge har mye av, og at datasentre kan bli en viktig ny næring for distriktene.
+
+22
+00:02:40,900 --> 00:02:49,540
+Diskusjonen vil trolig fortsette, men de fleste i Årdal er glade for nyheten. Norge har blitt et populært land for datasentre de siste årene.
+
+23
+00:02:50,360 --> 00:03:05,040
+Årsaken er kombinasjonen av kaldt klima, stabil politikk og mye fornybar kraft. I nord har store selskaper bygget datasentre i Narvik, og nå ser vi at også mindre bygder i Sogn får lignende muligheter.
+
+24
+00:03:05,860 --> 00:03:12,300
+Det kalde klimaet gjør det billigere å kjøle ned serverne, og det er en viktig grunn til at selskaper velger Norge.
+
+25
+00:03:13,140 --> 00:03:15,720
+Signe Sandberg er død, 75 år gammel.
+
+26
+00:03:16,480 --> 00:03:22,140
+Hun var den første kvinnelige soknepresten i Bjørgvin bispedømme, som dekker Vestland fylke.
+
+27
+00:03:22,940 --> 00:03:29,020
+Familien opplyser om dødsfallet til avisen Bergensavisen, og NRK Vestland har også skrevet om henne.
+
+28
+00:03:29,980 --> 00:03:35,720
+Avisen beskriver henne som modig og ekstremt arbeidsom, og mange minnes henne med varme ord.
+
+29
+00:03:36,340 --> 00:03:39,760
+Sandberg ble ansatt som sokneprest i Gulen i 1985.
+
+30
+00:03:40,500 --> 00:03:44,980
+Det var første gang et sokn i Bjørgvin ansatte en kvinne i denne stillingen.
+
+31
+00:03:45,880 --> 00:03:50,320
+Senere var hun prest i Årstad menighet i Bergen fram til 2001.
+
+32
+00:03:51,080 --> 00:03:56,880
+Hun er også kjent for å ha vært med i NRK-serien «To hus tett i tett», som mange nordmenn så på.
+
+33
+00:03:58,480 --> 00:04:02,740
+For å forstå hvorfor dette er en viktig nyhet, må vi se litt tilbake i historien.
+
+34
+00:04:03,500 --> 00:04:09,220
+Norge fikk sin første kvinnelige prest i 1961, da Ingrid Bjerkås ble ordinert.
+
+35
+00:04:09,980 --> 00:04:19,680
+Før den tid kunne ikke kvinner bli prester i Den norske kirke. Det tok mange år med diskusjon, motstand og kamp før kvinner fikk de samme rettighetene som menn i kirken.
+
+36
+00:04:20,720 --> 00:04:23,240
+Signe Sandberg var en av dem som gikk foran.
+
+37
+00:04:23,840 --> 00:04:29,580
+Hun tok teologisk embetseksamen i 1976 og ble ordinert til prest i 1981.
+
+38
+00:04:30,880 --> 00:04:39,000
+Da hun begynte i Gulen i 1985, var kvinnelige prester fortsatt uvanlige mange steder, særlig i mindre bygder langs kysten.
+
+39
+00:04:39,920 --> 00:04:44,740
+Hun møtte både nysgjerrighet og skepsis, men hun ble raskt en del av lokalsamfunnet.
+
+40
+00:04:45,380 --> 00:04:50,840
+Gjennom hele livet jobbet Sandberg for at kirken skulle være åpen og inkluderende for alle.
+
+41
+00:04:51,560 --> 00:04:54,280
+Hun var heller ikke redd for å være ærlig om sitt eget liv.
+
+42
+00:04:55,240 --> 00:05:02,260
+I en NRK-artikkel fortalte hun åpent om å komme ut av skapet som homofil, noe som var modig i kirken på den tiden.
+
+43
+00:05:03,040 --> 00:05:08,200
+Hun mente at alle mennesker skulle få lov til å være seg selv og bli tatt godt imot.
+
+44
+00:05:08,960 --> 00:05:15,520
+Mange i Bergen og i Sogn husker henne som en varm og tydelig prest som alltid hadde tid til å lytte.
+
+45
+00:05:16,220 --> 00:05:20,780
+Hun brydde seg om menneskene i lokalsamfunnet og var ikke redd for å si det hun mente.
+
+46
+00:05:21,760 --> 00:05:26,300
+Når en slik person går bort, er det mange som føler både sorg og takknemlighet.
+
+47
+00:05:27,060 --> 00:05:31,160
+Signe Sandberg har satt dype spor etter seg i norsk kirkehistorie.
+
+48
+00:05:31,980 --> 00:05:38,160
+Gulen er en liten kommune i Sogn, og det var en stor begivenhet da den unge presten kom dit i 1985.
+
+49
+00:05:39,100 --> 00:05:43,640
+Hun ble raskt en del av bygda, og folk oppdaget at hun både var dyktig og varm.
+
+50
+00:05:44,440 --> 00:05:50,520
+Mange lokale innbyggere har senere fortalt at hun betydde mye for dem, både i glede og i sorg.
+
+51
+00:05:51,320 --> 00:05:54,680
+Slik ble hun et forbilde for andre kvinner som ønsket å bli prester.
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  console.log('VTT cues loaded:', cues.length);
+  buildCueElements();
+  // Show first cue as indicator
+  if (cues.length > 0) {
+    const info = document.createElement('div');
+    info.style.cssText = 'font-size:0.75rem;color:#aaa;margin-bottom:8px;padding:0 14px;';
+    info.textContent = cues.length + ' avsnitt lastet';
+    textDisplay.insertBefore(info, textDisplay.firstChild);
+  }
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      // Scroll into view (commented: causes issues in WeChat browser)
+      // el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>
