@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+    .player-card { position: relative; top: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="metadata"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"><p style="color:#888;font-size:0.85rem;">Laster tekst ...</p></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-08-15.mp3';
+const TITLE = 'Dagens nyheter – 15. august 2026';
+const DATE_STR = '2026-08-15';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:03,360 --> 00:00:07,860
+Et bergensk filmselskap har fått ti millioner kroner i støtte til en ny spillefilm.
+
+2
+00:00:08,680 --> 00:00:11,460
+Selskapet heter Mer Film, og det holder til i Bergen.
+
+3
+00:00:12,160 --> 00:00:15,160
+Filmen har fått den foreløpige tittelen «Uten tittel».
+
+4
+00:00:15,780 --> 00:00:18,600
+Det er Norsk filminstitutt (NFI) som gir pengene.
+
+5
+00:00:19,260 --> 00:00:22,920
+NFI er en statlig organisasjon som støtter norsk film.
+
+6
+00:00:23,540 --> 00:00:28,960
+Produsent for filmen er Maria Ekerhovd, og regi og manus er skrevet av Eskil Vogt.
+
+7
+00:00:29,620 --> 00:00:35,080
+Ti millioner kroner er en stor sum, og det betyr mye for et filmselskap utenfor Oslo.
+
+8
+00:00:36,220 --> 00:00:46,100
+Produksjonsstøtte er penger som skal brukes til alt som trengs for å lage en film, for eksempel skuespillere, teknisk utstyr, lokaler og etterarbeid.
+
+9
+00:00:47,080 --> 00:00:49,020
+Mange kjenner kanskje navnene fra før.
+
+10
+00:00:49,700 --> 00:00:55,000
+Ekerhovd og Vogt vant Oscar denne våren sammen med regissøren Joachim Trier.
+
+11
+00:00:55,710 --> 00:01:00,480
+De vant for filmen «Affeksjonsverdi», som tok prisen for beste internasjonale film.
+
+12
+00:01:01,280 --> 00:01:07,500
+Dette var historisk, fordi det var første gang en norsk spillefilm vant en Oscar i denne kategorien.
+
+13
+00:01:08,320 --> 00:01:12,800
+Prisen ble delt ut i Los Angeles, og det var en stor begivenhet for norsk film.
+
+14
+00:01:13,760 --> 00:01:18,620
+Den nye filmen bygger altså videre på et sterkt og internasjonalt anerkjent samarbeid.
+
+15
+00:01:19,160 --> 00:01:22,680
+Det gir håp om at også dette prosjektet kan nå langt ut i verden.
+
+16
+00:01:23,490 --> 00:01:26,560
+Det var likevel ikke selvsagt at filmen skulle få penger.
+
+17
+00:01:27,420 --> 00:01:30,280
+Prosjektet fikk først avslag på søknaden om støtte.
+
+18
+00:01:31,140 --> 00:01:34,700
+Men filmskaperne ba om en ny og uavhengig vurdering av søknaden.
+
+19
+00:01:35,440 --> 00:01:38,920
+Da ble saken vurdert på nytt, og denne gangen fikk de tilskuddet.
+
+20
+00:01:39,780 --> 00:01:42,680
+Det viser at det nytter å stå på og be om en ny sjanse.
+
+21
+00:01:43,680 --> 00:01:50,840
+Muligheten til å be om en uavhengig vurdering finnes nettopp fordi alle søkere skal føle at de blir behandlet rettferdig.
+
+22
+00:01:52,440 --> 00:01:58,580
+Norsk filminstitutt mener prosjektet er ambisiøst og bygger videre på Eskil Vogts særegne kunstnerskap.
+
+23
+00:01:59,560 --> 00:02:01,720
+Filmen «Uten tittel» blir en thriller.
+
+24
+00:02:02,440 --> 00:02:03,540
+Hva handler den egentlig om?
+
+25
+00:02:04,740 --> 00:02:11,620
+Foreløpig vet vi at det er en psykologisk thriller om kunst, makt og de urolige grensene mellom minner og sannhet.
+
+26
+00:02:12,460 --> 00:02:16,720
+Regissøren Eskil Vogt er kjent for å lage stemningsfulle og spennende filmer.
+
+27
+00:02:17,360 --> 00:02:20,400
+Han har tidligere jobbet både med skrekkfilm og drama.
+
+28
+00:02:21,280 --> 00:02:25,140
+Thrillere er populære hos publikum, både i Norge og i utlandet.
+
+29
+00:02:25,660 --> 00:02:29,020
+Planen er at filmen skal ha premiere mot slutten av 2028.
+
+30
+00:02:30,000 --> 00:02:33,140
+Det er altså et prosjekt som vil bli synlig i flere år framover.
+
+31
+00:02:33,880 --> 00:02:35,520
+Nyheten er viktig for Bergen.
+
+32
+00:02:36,140 --> 00:02:43,320
+Byen har et aktivt filmmiljø, og slike tildelinger viser at det går an å lage stor, profesjonell film utenfor Oslo.
+
+33
+00:02:44,240 --> 00:02:53,220
+Når lokale selskaper får nasjonal støtte, skaper det arbeidsplasser og oppmerksomhet. Det kan også inspirere unge filmskapere i regionen.
+
+34
+00:02:53,940 --> 00:03:00,680
+Flere norske filmer har de siste årene fått oppmerksomhet internasjonalt, og Bergen er en viktig del av denne utviklingen.
+
+35
+00:03:01,580 --> 00:03:05,920
+Bergens Tidende meldte om saken først, og flere andre medier har fulgt etter.
+
+36
+00:03:06,860 --> 00:03:11,800
+En ny klimarapport viser at utslippene fra cruiseskip i Norge aldri har vært høyere.
+
+37
+00:03:12,500 --> 00:03:22,140
+Rapporten er laget av Norsk Klimastiftelse. Den viser at utslippene fra cruiseskip har økt med over 64 prosent siden 2016.
+
+38
+00:03:22,980 --> 00:03:38,640
+Samtidig har norske ferjer, hurtigbåter og andre ruteskip klart å kutte utslippene sine med rundt 20 prosent på ti år. Med andre ord går utviklingen i feil retning for cruiseskipene, selv om annen skipstrafikk blir renere.
+
+39
+00:03:39,760 --> 00:03:41,340
+Hvorfor øker utslippene?
+
+40
+00:03:42,220 --> 00:03:46,500
+En del av forklaringen er at det har blitt mye mer cruisetrafikk langs norskekysten.
+
+41
+00:03:47,180 --> 00:03:55,580
+Krigen i Ukraina og uro i andre deler av verden har ført til at skip har blitt flyttet fra Østersjøen og Rødehavet til Norge.
+
+42
+00:03:56,360 --> 00:04:00,620
+Men rapporten peker på at utslippene har økt mer enn selve trafikken.
+
+43
+00:04:01,320 --> 00:04:04,880
+Det betyr at cruiseskipene også slipper ut mer per reise enn før.
+
+44
+00:04:06,080 --> 00:04:13,940
+Norskekysten er blitt et stadig mer populært reisemål, særlig om sommeren. Problemet blir altså ikke løst bare ved å flytte på skipene.
+
+45
+00:04:14,740 --> 00:04:17,380
+Rapporten nevner to hovedårsaker til utviklingen.
+
+46
+00:04:18,080 --> 00:04:20,100
+Den første er mangel på infrastruktur.
+
+47
+00:04:22,280 --> 00:04:31,660
+I 2025 la cruiseskip til kai 2578 ganger ved Norges 15 største cruisehavner, men bare 543 av anløpene brukte landstrøm.
+
+48
+00:04:32,620 --> 00:04:41,100
+Landstrøm betyr at skipet får strøm fra land i stedet for å la motorene gå. Da slipper skipet ut mye mindre mens det ligger ved kai.
+
+49
+00:04:42,060 --> 00:04:44,640
+Den andre årsaken er svake miljøkrav.
+
+50
+00:04:45,500 --> 00:04:52,680
+Kravet om at bare nullutslippsskip skulle få lov til å seile i verdensarvfjordene fra 2026, ble endret.
+
+51
+00:04:53,440 --> 00:04:57,200
+For de største skipene ble fristen utsatt helt til 2032.
+
+52
+00:04:58,160 --> 00:05:01,500
+Flere politikere og miljøorganisasjoner reagerer på dette.
+
+53
+00:05:02,400 --> 00:05:08,780
+Frøya Skjulsæther i MDG sier at cruiseturismen ikke er i samsvar med klimamålene.
+
+54
+00:05:09,420 --> 00:05:14,580
+Marthe Hammer i SV mener vi ikke kan fortsette å la cruisenæringen slippe unna.
+
+55
+00:05:15,320 --> 00:05:30,320
+Sigurd Enge i Bellona sier at mangelen på krav gjør at utslippene både er lovlige og lønnsomme. Regjeringen svarer at cruisetrafikken i stor grad styres av internasjonale regler gjennom EU og FNs maritime organisasjon IMO.
+
+56
+00:05:31,220 --> 00:05:37,220
+Statssekretær Astrid Hoem sier at Norge er ledende i arbeidet for strengere globale klimakrav.
+
+57
+00:05:38,840 --> 00:05:44,000
+Debatten handler om hvorvidt Norge bør sette egne, strengere krav enn de internasjonale.
+
+58
+00:05:44,780 --> 00:05:47,140
+Nyheten er spesielt viktig for Bergen.
+
+59
+00:05:47,840 --> 00:05:57,980
+Bergen er en av Norges største cruisehavner, og byen har allerede innført lokale miljøkrav og ordninger som premierer skip med lavere utslipp.
+
+60
+00:05:58,520 --> 00:05:59,780
+Det samme har Flåm gjort.
+
+61
+00:06:00,340 --> 00:06:03,860
+Men flere mener at utbyggingen av landstrøm må gå mye raskere.
+
+62
+00:06:04,560 --> 00:06:09,000
+Norge har et mål om å halvere utslippene fra skipsfarten innen 2030.
+
+63
+00:06:10,060 --> 00:06:13,680
+Skal vi klare det, må cruiseskipene også bli en del av løsningen.
+
+64
+00:06:14,500 --> 00:06:18,240
+Spørsmålet er hvor raskt politikerne klarer å sette strengere krav.
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  console.log('VTT cues loaded:', cues.length);
+  buildCueElements();
+  // Show first cue as indicator
+  if (cues.length > 0) {
+    const info = document.createElement('div');
+    info.style.cssText = 'font-size:0.75rem;color:#aaa;margin-bottom:8px;padding:0 14px;';
+    info.textContent = cues.length + ' avsnitt lastet';
+    textDisplay.insertBefore(info, textDisplay.firstChild);
+  }
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      // Scroll into view (commented: causes issues in WeChat browser)
+      // el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>
