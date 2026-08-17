@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+    .player-card { position: relative; top: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="metadata"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"><p style="color:#888;font-size:0.85rem;">Laster tekst ...</p></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-08-17.mp3';
+const TITLE = 'Dagens nyheter – 17. august 2026';
+const DATE_STR = '2026-08-17';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:03,940 --> 00:00:09,160
+Helikopterselskapet Airlift har fått nye eiere, og nyheten har skapt glede i Sunnfjord.
+
+2
+00:00:10,180 --> 00:00:15,240
+Nå er selskapet igjen ett hundre prosent lokalt eid av Airconstruction i Førde.
+
+3
+00:00:16,000 --> 00:00:21,680
+Tidligere hadde selskapet tre forskjellige eiere: Airconstruction, Pegasus Helicopter og Fjellfly.
+
+4
+00:00:23,120 --> 00:00:34,060
+De tre eierne var imidlertid uenige om hvilken vei selskapet skulle gå videre. Derfor har Airconstruction nå kjøpt ut de to andre eierne, slik at selskapet igjen har én tydelig eier.
+
+5
+00:00:35,100 --> 00:00:40,660
+Det var avisen Firda som først omtalte saken, og NRK Vestland har også skrevet om den.
+
+6
+00:00:41,540 --> 00:00:48,900
+Airlift er et helikopterselskap som har base flere steder i Norge, blant annet i Førde, Bergen, Tromsø og Hammerfest.
+
+7
+00:00:49,840 --> 00:00:53,020
+Selskapet flyr helikopter til mange forskjellige oppgaver.
+
+8
+00:00:53,620 --> 00:00:58,700
+De transporterer personer og materiell, og de hjelper til med å løfte tunge ting.
+
+9
+00:00:59,560 --> 00:01:03,520
+Airlift er også med på redningsarbeid og brannslokking om sommeren.
+
+10
+00:01:04,300 --> 00:01:08,760
+Selskapet har med andre ord en viktig rolle i samfunnet, særlig her i Vestland.
+
+11
+00:01:09,500 --> 00:01:16,500
+Mange som bor langs kysten har sett Airlifts helikoptre på jobb, enten det handler om å frakte folk eller å slokke skogbranner.
+
+12
+00:01:17,180 --> 00:01:20,820
+Airlift har en lang historie i Sogn og Fjordane og Vestland.
+
+13
+00:01:21,540 --> 00:01:28,100
+Selskapet har vokst fra å være en liten lokal bedrift til å bli en av de største helikopteroperatørene i Norge.
+
+14
+00:01:28,980 --> 00:01:35,960
+I dag har selskapet flere helikoptre av forskjellige typer, og de ansatte jobber i mange deler av landet.
+
+15
+00:01:36,720 --> 00:01:44,860
+For folk som bor i distriktene er slike arbeidsplasser ekstra viktige, fordi de gir folk mulighet til å bo og jobbe nær hjemstedet sitt.
+
+16
+00:01:45,740 --> 00:01:48,800
+Det er derfor mange følger med på hva som skjer med selskapet.
+
+17
+00:01:49,500 --> 00:02:01,020
+De økonomiske tallene for selskapet er også gode. I fjor hadde Airlift en rekordhøy omsetning på 506 millioner kroner, og overskuddet ble 15 millioner kroner.
+
+18
+00:02:01,940 --> 00:02:06,380
+Omtrent halvparten av omsetningen kommer fra en los-kontrakt med Kystverket.
+
+19
+00:02:07,320 --> 00:02:15,920
+En los er en person som hjelper store skip med å navigere trygt langs den norske kysten, og Airlift flyr losene ut til skipene.
+
+20
+00:02:16,740 --> 00:02:28,080
+Dette er en viktig og stabil inntektskilde for selskapet. De første seks månedene av 2026 ser enda bedre ut enn i fjor, noe som viser at selskapet er i god utvikling.
+
+21
+00:02:28,740 --> 00:02:30,820
+Hvorfor er dette viktig for folk flest?
+
+22
+00:02:31,600 --> 00:02:37,960
+Når et stort selskap er lokalt eid, blir de viktigste beslutningene tatt nær der folk bor og jobber.
+
+23
+00:02:38,660 --> 00:02:41,960
+Pengene blir også i større grad igjen i lokalsamfunnet.
+
+24
+00:02:42,600 --> 00:02:50,340
+For Førde og resten av Sunnfjord er Airlift en stor arbeidsgiver, og eierskapet betyr derfor mye for hele regionen.
+
+25
+00:02:51,060 --> 00:03:01,480
+Mange i lokalmiljøet er glade for at selskapet nå er tilbake på lokale hender, og de håper at Airlift kan vokse videre med tydelig ledelse og en klar strategi for fremtiden.
+
+26
+00:03:02,460 --> 00:03:18,760
+Søndag kveld spilte Brann fotballkamp på hjemmebane mot HamKam, og Brann stadion var full av tilskuere. Kampen endte med en komfortabel seier 3–0 til hjemmelaget. Dette var Branns andre hjemmeseier på rad, og med seieren klatret laget opp til sjetteplass i Eliteserien.
+
+27
+00:03:21,060 --> 00:03:24,180
+Eliteserien er den øverste divisjonen i norsk herrefotball.
+
+28
+00:03:25,180 --> 00:03:33,340
+For supporterne i Bergen var dette en flott kveld, og stemningen på stadion var god fra første spark på ballen til dommeren blåste av kampen.
+
+29
+00:03:34,060 --> 00:03:36,680
+Kampens store navn var Joachim Soltvedt.
+
+30
+00:03:37,300 --> 00:03:47,720
+Han spilte sin kamp nummer 100 for Brann, og han feiret jubileet på best mulig måte. På overtid i første omgang slo han til med et fantastisk frispark fra langt hold.
+
+31
+00:03:48,160 --> 00:03:51,580
+Ballen suste gjennom luften og gikk i mål via tverrliggeren.
+
+32
+00:03:52,340 --> 00:03:55,860
+Dette var kampens store øyeblikk, og publikum jublet.
+
+33
+00:03:56,820 --> 00:04:02,340
+Soltvedt kommer fra Laksevåg i Bergen, og han er en spiller som betyr mye for klubben og for byen.
+
+34
+00:04:03,080 --> 00:04:06,540
+Å score i sin kamp nummer 100 er noe han sent vil glemme.
+
+35
+00:04:08,040 --> 00:04:09,920
+Kampen startet imidlertid dramatisk.
+
+36
+00:04:10,460 --> 00:04:16,160
+Etter bare fire minutter satte Kristall Ingason ballen i mål, og Brann trodde de hadde fått en drømmeåpning.
+
+37
+00:04:17,180 --> 00:04:18,520
+Men scoringen ble annullert.
+
+38
+00:04:19,060 --> 00:04:24,340
+Dommerne brukte VAR, som er videosystemet i fotball, og så at Ingason var i offside.
+
+39
+00:04:25,020 --> 00:04:27,460
+Etter en drøy halvtime ble det enda verre for HamKam.
+
+40
+00:04:28,560 --> 00:04:42,660
+Martin Gjone fikk først gult kort, men etter at dommeren så situasjonen på video, ble kortet oppgradert til rødt. HamKam måtte dermed spille resten av kampen med ti mann, noe som gjorde oppgaven svært vanskelig for bortelaget.
+
+41
+00:04:43,380 --> 00:04:47,160
+Etter pause fortsatte Brann å dominere kampen fullstendig.
+
+42
+00:04:48,160 --> 00:04:53,420
+Etter 73 minutter scoret Noah Holm til 2–0, og da var kampen i praksis avgjort.
+
+43
+00:04:54,320 --> 00:04:57,300
+Helt på tampen satte Bård Finne punktum med 3–0.
+
+44
+00:04:58,220 --> 00:05:03,780
+Brann kontrollerte kampen fra start til slutt, og HamKam hadde svært få sjanser til å score.
+
+45
+00:05:04,540 --> 00:05:12,260
+Resultatet 3–0 var en fortjent seier for hjemmelaget, og de røde fra Bergen leverte en solid laginnsats foran sine egne supportere.
+
+46
+00:05:13,560 --> 00:05:20,760
+Kampen mot HamKam ble spilt søndag ettermiddag, og hele 15 195 tilskuere hadde tatt turen til Brann stadion.
+
+47
+00:05:21,680 --> 00:05:25,700
+Det er et høyt tall, og det viser hvor stor fotballinteressen er i Bergen.
+
+48
+00:05:26,300 --> 00:05:40,220
+Brann har hatt en varierende sesong, men de to hjemmeseirene på rad viser at laget er på vei oppover. Nå venter nye kamper i Eliteserien, og laget ønsker å klatre enda høyere på tabellen før sesongen er over.
+
+49
+00:05:41,220 --> 00:05:42,800
+Hvorfor betyr dette noe for Bergen?
+
+50
+00:05:43,500 --> 00:05:49,020
+Brann er byens store fotballklubb, og svært mange i byen følger laget tett gjennom hele sesongen.
+
+51
+00:05:49,800 --> 00:05:53,620
+Gode resultater skaper glede, fellesskap og stolthet i byen.
+
+52
+00:05:54,340 --> 00:06:00,440
+Sjetteplassen betyr at Brann ligger trygt plassert midt på tabellen, og nå ser laget fremover mot nye kamper.
+
+53
+00:06:01,600 --> 00:06:04,380
+Supporterne håper på flere seirer i ukene som kommer.
+
+54
+00:06:05,120 --> 00:06:10,020
+For Joachim Soltvedt var denne kvelden uansett en han kommer til å huske resten av livet.
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  console.log('VTT cues loaded:', cues.length);
+  buildCueElements();
+  // Show first cue as indicator
+  if (cues.length > 0) {
+    const info = document.createElement('div');
+    info.style.cssText = 'font-size:0.75rem;color:#aaa;margin-bottom:8px;padding:0 14px;';
+    info.textContent = cues.length + ' avsnitt lastet';
+    textDisplay.insertBefore(info, textDisplay.firstChild);
+  }
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      // Scroll into view (commented: causes issues in WeChat browser)
+      // el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>
