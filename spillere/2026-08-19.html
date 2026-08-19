@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+    .player-card { position: relative; top: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="metadata"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"><p style="color:#888;font-size:0.85rem;">Laster tekst ...</p></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-08-19.mp3';
+const TITLE = 'Dagens nyheter – 19. august 2026';
+const DATE_STR = '2026-08-19';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:02,780 --> 00:00:09,880
+Statsforvalteren i Vestland har undersøkt elleve kommuner for å se om de følger reglene om politiattest.
+
+2
+00:00:10,660 --> 00:00:11,880
+Resultatet er ikke bra.
+
+3
+00:00:12,340 --> 00:00:18,160
+Åtte av elleve kommuner har brutt regelverket. Bare to kommuner har fulgt loven helt riktig.
+
+4
+00:00:18,800 --> 00:00:20,100
+Det skriver NRK Vestland.
+
+5
+00:00:20,880 --> 00:00:27,120
+Saken handler om ansatte som jobber i skoler og i skolefritidsordningen, som vi ofte kaller SFO.
+
+6
+00:00:28,080 --> 00:00:33,960
+SFO er et tilbud der barn kan være før og etter skoletid mens foreldrene er på jobb.
+
+7
+00:00:34,820 --> 00:00:35,980
+Hva er en politiattest?
+
+8
+00:00:36,580 --> 00:00:39,260
+En politiattest er et dokument fra politiet.
+
+9
+00:00:40,040 --> 00:00:43,780
+Dokumentet viser om en person har gjort noe kriminelt tidligere.
+
+10
+00:00:44,580 --> 00:00:48,960
+Når en person skal jobbe med barn, må arbeidsgiveren be om en politiattest.
+
+11
+00:00:49,760 --> 00:01:00,820
+Dette skal beskytte barn og unge mot personer som kan utgjøre en risiko for sikkerheten deres. Regelen er viktig, og derfor er det alvorlig når mange kommuner ikke følger den.
+
+12
+00:01:01,660 --> 00:01:03,840
+Statsforvalteren fant flere forskjellige feil.
+
+13
+00:01:04,420 --> 00:01:08,640
+For det første sørget noen kommuner ikke for at politiattesten var ny nok.
+
+14
+00:01:09,500 --> 00:01:14,380
+En politiattest skal ikke være eldre enn tre måneder når den blir levert.
+
+15
+00:01:15,120 --> 00:01:18,220
+Noen kommuner godtok attester som var eldre enn dette.
+
+16
+00:01:19,320 --> 00:01:30,340
+For det andre hentet noen kommuner ikke inn politiattesten før personen ble ansatt. Det betyr at en person kunne begynne å jobbe med barn uten at kommunen hadde sjekket bakgrunnen.
+
+17
+00:01:30,900 --> 00:01:32,740
+Det var også flere andre problemer.
+
+18
+00:01:33,440 --> 00:01:38,120
+Noen kommuner hentet ikke inn en ny attest når en ansatt byttet til en ny stilling.
+
+19
+00:01:38,800 --> 00:01:43,620
+Det kan for eksempel skje når en lærer slutter på en skole og begynner på en annen skole.
+
+20
+00:01:44,660 --> 00:01:51,280
+I tillegg var det noen kommuner som hadde ansatte som aldri hadde levert en politiattest i det hele tatt.
+
+21
+00:01:52,020 --> 00:01:57,820
+Disse personene jobbet altså med barn uten at noen hadde kontrollert om de var trygge å ansette.
+
+22
+00:01:59,220 --> 00:02:04,280
+Statsforvalteren er en statlig etat som passer på at kommunene følger loven og regelverket.
+
+23
+00:02:04,880 --> 00:02:11,820
+Når etaten fører tilsyn, betyr det at den undersøker hvordan kommunene jobber i praksis, ikke bare på papiret.
+
+24
+00:02:12,440 --> 00:02:16,860
+Denne gangen valgte Statsforvalteren å undersøke elleve kommuner i Vestland.
+
+25
+00:02:17,820 --> 00:02:22,220
+Resultatet viser at problemet er stort og finnes mange forskjellige steder i fylket.
+
+26
+00:02:23,040 --> 00:02:25,840
+Det er altså ikke bare én kommune som har gjort en feil.
+
+27
+00:02:26,600 --> 00:02:35,880
+Mange foreldre blir overrasket når de hører om dette, fordi de trodde at alle som jobber med barn allerede var sjekket av politiet før de begynte i jobben.
+
+28
+00:02:37,100 --> 00:02:39,540
+Statsforvalteren har nå sendt rapporten sin til kommunene.
+
+29
+00:02:40,320 --> 00:02:42,260
+Kommunene må rette opp feilene sine.
+
+30
+00:02:42,840 --> 00:02:48,640
+Det betyr at de må sjekke alle ansatte og hente inn nye politiattester der det trengs.
+
+31
+00:02:49,340 --> 00:02:51,520
+Dette er godt nytt for foreldre og barn.
+
+32
+00:02:52,100 --> 00:02:57,140
+Når kommunene følger reglene, vet vi at alle som jobber med barn er sjekket av politiet.
+
+33
+00:02:57,840 --> 00:03:02,420
+Slik kan vi føle oss tryggere når vi sender barna våre på skolen og til SFO.
+
+34
+00:03:03,560 --> 00:03:07,000
+Hvert år kommer det en internasjonal rangering av universiteter.
+
+35
+00:03:08,100 --> 00:03:13,120
+Rangeringen kalles Shanghai-rangeringen, fordi den lages av et universitet i Shanghai i Kina.
+
+36
+00:03:14,500 --> 00:03:17,320
+I år er Universitetet i Bergen nummer tre i Norge.
+
+37
+00:03:18,120 --> 00:03:19,860
+Det er en stor ære for byen vår.
+
+38
+00:03:20,900 --> 00:03:27,440
+Universitetet i Bergen, som vi ofte kaller UiB, er dermed et av de beste universitetene i landet.
+
+39
+00:03:28,060 --> 00:03:36,160
+Det er Universitetet i Oslo som fortsatt er best i Norge. Men Universitetet i Oslo falt tre plasser på verdensrangeringen.
+
+40
+00:03:36,700 --> 00:03:41,880
+I fjor lå universitetet på plass 83, og i år ligger det på plass 86.
+
+41
+00:03:42,940 --> 00:03:44,700
+Det skriver nettavisen Uniforum.
+
+42
+00:03:45,520 --> 00:03:49,820
+Det viser at konkurransen mellom universitetene i verden er hard.
+
+43
+00:03:50,500 --> 00:03:54,760
+Selv et godt universitet kan falle noen plasser fra ett år til det neste.
+
+44
+00:03:55,820 --> 00:03:57,920
+På andre plass i Norge finner vi NTNU.
+
+45
+00:03:59,220 --> 00:04:02,180
+NTNU står for Norges teknisk-naturvitenskapelige universitet.
+
+46
+00:04:02,840 --> 00:04:03,780
+Det ligger i Trondheim.
+
+47
+00:04:04,260 --> 00:04:08,380
+NTNU ligger altså foran Universitetet i Bergen på rangeringen.
+
+48
+00:04:09,060 --> 00:04:12,920
+Det betyr at Universitetet i Bergen må jobbe hardt for å bli bedre.
+
+49
+00:04:13,660 --> 00:04:19,060
+Mange studenter og forskere i Bergen håper at UiB skal klatre høyere på listen neste år.
+
+50
+00:04:20,200 --> 00:04:21,800
+Hva er det Shanghai-rangeringen måler?
+
+51
+00:04:22,520 --> 00:04:30,800
+Rangeringen bygger på flere ting. Den ser på vitenskapelige publikasjoner, altså artikler og bøker som forskerne har skrevet.
+
+52
+00:04:31,600 --> 00:04:35,180
+Den ser også på forskningspriser, som er priser forskerne har vunnet.
+
+53
+00:04:36,200 --> 00:04:45,520
+Til slutt ser den på vurderinger av tidligere studenter. Alt dette til sammen forteller noe om hvor godt et universitet er til å forske og undervise.
+
+54
+00:04:46,620 --> 00:04:55,620
+Universitetet i Bergen har en lang og stolt historie. Det ble grunnlagt i 1946, og i dag studerer mer enn 18 000 studenter der.
+
+55
+00:04:56,760 --> 00:05:02,900
+Universitetet ligger midt i byen, og mange av bygningene finner vi ved Nygårdshøyden, ikke langt fra sentrum.
+
+56
+00:05:03,940 --> 00:05:11,100
+Her kan studentene studere mange forskjellige fag, for eksempel medisin, juss, historie, språk og naturvitenskap.
+
+57
+00:05:12,180 --> 00:05:22,020
+Universitetet er også en viktig arbeidsplass for Bergen. Mange forskere og lærere jobber der hver dag, og de skaper ny kunnskap som hele samfunnet kan bruke.
+
+58
+00:05:23,120 --> 00:05:27,800
+En god rangering kan også gjøre universitetet mer attraktivt for nye studenter.
+
+59
+00:05:28,720 --> 00:05:32,260
+På første plass i hele verden ligger Harvard University i USA.
+
+60
+00:05:32,820 --> 00:05:36,120
+Harvard er et av de mest kjente universitetene i verden.
+
+61
+00:05:36,680 --> 00:05:39,120
+Det er en drøm for mange studenter å studere der.
+
+62
+00:05:39,600 --> 00:05:44,400
+For oss i Bergen er det fint å vite at universitetet vårt er blant de beste i Norge.
+
+63
+00:05:45,040 --> 00:05:52,420
+Kanskje har du selv lyst til å studere ved UiB en dag? Da kan du være stolt av å gå på et universitet som er høyt rangert.
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  console.log('VTT cues loaded:', cues.length);
+  buildCueElements();
+  // Show first cue as indicator
+  if (cues.length > 0) {
+    const info = document.createElement('div');
+    info.style.cssText = 'font-size:0.75rem;color:#aaa;margin-bottom:8px;padding:0 14px;';
+    info.textContent = cues.length + ' avsnitt lastet';
+    textDisplay.insertBefore(info, textDisplay.firstChild);
+  }
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      // Scroll into view (commented: causes issues in WeChat browser)
+      // el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>
