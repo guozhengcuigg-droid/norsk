@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+    .player-card { position: relative; top: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="metadata"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"><p style="color:#888;font-size:0.85rem;">Laster tekst ...</p></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-08-20.mp3';
+const TITLE = 'Dagens nyheter – 20. august 2026';
+const DATE_STR = '2026-08-20';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:03,200 --> 00:00:06,380
+I dag er det fare for streik blant flygeledere i Norge.
+
+2
+00:00:07,140 --> 00:00:12,820
+Norsk Flygelederforening forhandler med Spekter, som er arbeidsgiverorganisasjonen for flygelederne.
+
+3
+00:00:13,660 --> 00:00:19,700
+Partene har ikke klart å bli enige om lønn og arbeidsvilkår, og derfor har de bedt om hjelp fra en mekler.
+
+4
+00:00:20,680 --> 00:00:24,980
+Meklingen fortsatte torsdag morgen, og begge sider prøver fortsatt å finne en løsning.
+
+5
+00:00:26,160 --> 00:00:30,660
+Hvis de ikke blir enige innen midnatt, kan flytrafikken bli rammet allerede fra fredag.
+
+6
+00:00:31,440 --> 00:00:35,420
+Mange reisende følger derfor spent med på hva som skjer i løpet av dagen.
+
+7
+00:00:36,100 --> 00:00:42,040
+Hvis det blir brudd i meklingen, blir tolv flygeledere tatt ut i streik fredag morgen klokka 06.30.
+
+8
+00:00:43,140 --> 00:00:50,260
+Disse flygelederne jobber på to av de viktigste flyplassene i Norge: Flesland i Bergen og Gardermoen i Oslo.
+
+9
+00:00:50,980 --> 00:00:55,880
+Flesland er den nest største flyplassen i landet og helt sentral for Vestlandet.
+
+10
+00:00:56,480 --> 00:01:02,700
+Hvert år reiser millioner av passasjerer gjennom Flesland, både innenlands og til utlandet.
+
+11
+00:01:03,320 --> 00:01:11,880
+Mange mennesker som bor i Bergen og områdene rundt, er avhengige av fly for å besøke familie, dra på ferie eller reise i jobb.
+
+12
+00:01:12,900 --> 00:01:17,420
+Avinor Flysikring har allerede varslet at en streik vil føre til forsinkelser.
+
+13
+00:01:18,120 --> 00:01:23,320
+Allerede fredag ettermiddag og kveld kan flyene bli forsinket eller til og med innstilt.
+
+14
+00:01:24,280 --> 00:01:29,680
+Reisende bør derfor følge med på informasjon fra flyselskapet sitt før de drar til flyplassen.
+
+15
+00:01:30,740 --> 00:01:34,860
+Det er lurt å sjekke e-post og SMS for oppdateringer om flyet ditt.
+
+16
+00:01:35,660 --> 00:01:44,880
+August er en travel måned med mange som reiser hjem fra ferie, og en streik kan skape store problemer for både familier og forretningsreisende.
+
+17
+00:01:45,580 --> 00:01:48,920
+Noen kan bli nødt til å endre planene sine i siste liten.
+
+18
+00:01:50,120 --> 00:01:51,620
+Hva gjør egentlig en flygeleder?
+
+19
+00:01:52,620 --> 00:01:57,320
+Flygeledere er personer som styrer flytrafikken fra et kontrolltårn på flyplassen.
+
+20
+00:01:58,060 --> 00:02:04,040
+De passer på at flyene tar av og lander trygt, og at de holder riktig avstand til hverandre i luften.
+
+21
+00:02:04,980 --> 00:02:10,580
+Jobben krever god konsentrasjon og ro, fordi mange menneskers liv avhenger av arbeidet deres.
+
+22
+00:02:11,480 --> 00:02:17,160
+Uten flygeledere kan ikke flyene fly som normalt, og nesten hele luftfarten stopper opp.
+
+23
+00:02:18,020 --> 00:02:24,080
+Derfor er en streik blant flygeledere en alvorlig sak for hele landet, ikke bare for Vestlandet.
+
+24
+00:02:24,580 --> 00:02:30,360
+En streik kan også påvirke økonomien, fordi mange bedrifter er avhengige av rask flytransport.
+
+25
+00:02:31,100 --> 00:02:35,100
+Det er en av grunnene til at partene jobber hardt for å unngå konflikt.
+
+26
+00:02:35,900 --> 00:02:42,500
+Meklingen fortsetter gjennom hele dagen, og partene håper å finne en løsning før fristen går ut ved midnatt.
+
+27
+00:02:43,280 --> 00:02:48,000
+Hvis de blir enige, blir det ingen streik, og flytrafikken går som normalt på fredag.
+
+28
+00:02:48,840 --> 00:02:54,760
+Hvis de ikke blir enige, må reisende forberede seg på forsinkelser og kanskje endre reiseplanene sine.
+
+29
+00:02:56,380 --> 00:03:05,740
+Flyselskapene kommer i så fall til å gi informasjon til passasjerene sine. Vi får vite mer i løpet av dagen og tidlig fredag morgen, når fristen har gått ut.
+
+30
+00:03:07,640 --> 00:03:11,200
+Havforskningsinstituttet har funnet ut noe interessant om havet utenfor Vestlandet.
+
+31
+00:03:11,920 --> 00:03:17,560
+Forskere definerte perioden fra 20. juli til 2. august som en marin kuldebølge.
+
+32
+00:03:18,120 --> 00:03:30,540
+Det betyr at overflatetemperaturen i havet var mye lavere enn normalt på denne tiden av året. En marin kuldebølge er det motsatte av en marin hetebølge, som er en periode med uvanlig varmt vann.
+
+33
+00:03:31,300 --> 00:03:37,720
+Slike hendelser påvirker både livet i havet og menneskene som bruker sjøen til bading, fiske og oppdrett.
+
+34
+00:03:39,280 --> 00:03:43,400
+Badetemperaturen var mellom 10 og 14 grader mange steder i denne perioden.
+
+35
+00:03:44,120 --> 00:03:49,900
+Det er ganske kaldt for å bade i sjøen om sommeren, når mange forventer vann på 18 grader eller mer.
+
+36
+00:03:50,620 --> 00:03:56,720
+Mange som hadde lyst til å ta et morgenbad eller bade på stranden, syntes nok at vannet var for kaldt.
+
+37
+00:03:57,880 --> 00:04:03,540
+Den kalde perioden gjorde at badesesongen ble kortere og mindre behagelig for mange i Vestland.
+
+38
+00:04:04,260 --> 00:04:10,900
+For dem som elsker å bade i fjorden, var sommeren en liten skuffelse, selv om noen modige sjeler badet likevel.
+
+39
+00:04:11,680 --> 00:04:13,940
+Hva er årsaken til den kalde perioden?
+
+40
+00:04:14,660 --> 00:04:17,700
+Ifølge forskerne henger den sammen med det dårlige været.
+
+41
+00:04:18,540 --> 00:04:23,860
+Sommeren i Vestland har vært våt, grå og kald, med mye regn og lite sol.
+
+42
+00:04:24,760 --> 00:04:29,960
+Dette påvirket også temperaturen i havet, fordi været og sjøen henger tett sammen.
+
+43
+00:04:30,620 --> 00:04:35,140
+Når været er dårlig over lang tid, blir vannet i sjøen kaldere enn vanlig.
+
+44
+00:04:35,940 --> 00:04:41,040
+Det som skjer i luften over oss, påvirker altså det som skjer i vannet under oss.
+
+45
+00:04:41,600 --> 00:04:49,180
+Dette er et godt eksempel på hvor tett klima og hav er knyttet sammen. Den kalde perioden er ikke bare dårlige nyheter.
+
+46
+00:04:49,940 --> 00:04:55,260
+Ifølge forskerne kan den være gode nyheter for noen arter som trives i kaldt vann.
+
+47
+00:04:56,240 --> 00:05:03,780
+Mange fisker og andre dyr i havet foretrekker kjølige temperaturer, og for dem kan en kuldebølge være positivt.
+
+48
+00:05:04,520 --> 00:05:11,880
+Forskere er interessert i slike hendelser fordi havet spiller en viktig rolle for klimaet og for økosystemene langs kysten.
+
+49
+00:05:12,560 --> 00:05:20,820
+Ved å studere både kulde- og hetebølger kan forskerne lære mer om hvordan havet reagerer på endringer i været og klimaet over tid.
+
+50
+00:05:22,080 --> 00:05:34,560
+Slik kunnskap er viktig for å forstå klimaendringene, som påvirker oss alle. Havforskningsinstituttet følger med på temperaturen i havet hele tiden, og de deler funnene sine med publikum.
+
+51
+00:05:35,440 --> 00:05:44,380
+Slik informasjon hjelper oss å forstå været og klimaet bedre, og den er viktig for fiskere, oppdrettere og alle som bruker havet i jobben sin.
+
+52
+00:05:45,160 --> 00:05:52,360
+Selv om badevannet var kaldt i sommer, er det godt å vite at forskerne holder et nøye øye med havet vårt.
+
+53
+00:05:52,940 --> 00:05:58,500
+Kanskje kommer det varmere badevann neste sommer, eller kanskje får vi en varm hetebølge i stedet.
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  console.log('VTT cues loaded:', cues.length);
+  buildCueElements();
+  // Show first cue as indicator
+  if (cues.length > 0) {
+    const info = document.createElement('div');
+    info.style.cssText = 'font-size:0.75rem;color:#aaa;margin-bottom:8px;padding:0 14px;';
+    info.textContent = cues.length + ' avsnitt lastet';
+    textDisplay.insertBefore(info, textDisplay.firstChild);
+  }
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      // Scroll into view (commented: causes issues in WeChat browser)
+      // el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>
