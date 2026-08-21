@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+    .player-card { position: relative; top: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="metadata"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"><p style="color:#888;font-size:0.85rem;">Laster tekst ...</p></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-08-21.mp3';
+const TITLE = 'Dagens nyheter – 21. august 2026';
+const DATE_STR = '2026-08-21';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:02,340 --> 00:00:07,460
+Fredag morgen gikk tolv flygeledere ut i streik i Norge.
+
+2
+00:00:08,220 --> 00:00:14,860
+Flygelederne jobber på to av de viktigste flyplassene i landet: Gardermoen i Oslo og Flesland i Bergen.
+
+3
+00:00:15,780 --> 00:00:20,540
+De jobber også med innflygingskontrollen til Gardermoen og med områdekontrollen for Vestlandet.
+
+4
+00:00:21,140 --> 00:00:27,420
+En streik blant flygeledere betyr at det blir færre personer til å lede flyene trygt inn og ut av flyplassene.
+
+5
+00:00:28,060 --> 00:00:33,520
+Derfor blir det forsinkelser i flytrafikken, og mange reisende blir berørt i dag og i helgen.
+
+6
+00:00:34,280 --> 00:00:40,420
+Streiken kommer etter at arbeidsgiverne og fagforeningen ikke klarte å bli enige om lønn og arbeidsvilkår.
+
+7
+00:00:41,400 --> 00:00:47,520
+Flygelederne mener at de jobber under et stort press, og at de ikke får nok betalt for det store ansvaret de har.
+
+8
+00:00:49,820 --> 00:00:54,100
+Arbeidsgiverorganisasjonen Spekter sier at de har strukket seg langt i forhandlingene.
+
+9
+00:00:55,600 --> 00:01:08,300
+Partene møttes til mekling tidligere i uken, men meklingen førte ikke fram. Derfor ble de tolv flygelederne tatt ut i streik fredag morgen, og flere kan følge etter hvis konflikten fortsetter over tid.
+
+10
+00:01:09,580 --> 00:01:14,140
+Allerede fredag ettermiddag må reisende regne med forsinkelser på både Flesland og Gardermoen.
+
+11
+00:01:15,460 --> 00:01:19,460
+Forsinkelsene vil øke utover dagen og bli betydelige i løpet av kvelden.
+
+12
+00:01:20,580 --> 00:01:24,360
+Dette vil igjen gi følgekonsekvenser for flytrafikken ellers i landet.
+
+13
+00:01:25,020 --> 00:01:29,100
+Mange som skal hjem fra ferie eller ut på reise i helgen, kan få problemer.
+
+14
+00:01:30,000 --> 00:01:43,700
+Avinor, som driver flyplassene, ber derfor alle reisende om å ta kontakt med flyselskapet sitt for å få informasjon om flyet sitt. Det er lurt å sjekke e-post og SMS jevnlig, slik at du ikke går glipp av en viktig beskjed.
+
+15
+00:01:44,340 --> 00:01:49,180
+Lørdag blir det noen forsinkelser på Gardermoen, og moderate forsinkelser på Vestlandet.
+
+16
+00:01:49,860 --> 00:01:55,820
+Utover kvelden ventes det store begrensninger, og luftrommet over Vestlandet kan bli stengt i en periode.
+
+17
+00:01:56,560 --> 00:01:58,460
+Søndag blir den vanskeligste dagen.
+
+18
+00:01:59,560 --> 00:02:05,040
+Da blir Gardermoen stengt for vanlig trafikk fra klokka halv sju til halv tolv på formiddagen.
+
+19
+00:02:05,860 --> 00:02:10,040
+Det betyr store forsinkelser og mange innstilte fly gjennom hele dagen.
+
+20
+00:02:10,880 --> 00:02:14,260
+Først på mandag ventes situasjonen å bli noe bedre igjen.
+
+21
+00:02:14,940 --> 00:02:18,560
+Det er likevel viktig å vite at ikke all trafikk blir rammet.
+
+22
+00:02:19,340 --> 00:02:23,520
+Ambulansefly, politi, søk og redning skal gå som normalt.
+
+23
+00:02:24,180 --> 00:02:31,840
+Disse viktige tjenestene er unntatt fra streiken, sier konserndirektør Jan Gunnar Pedersen i Avinor Flysikring.
+
+24
+00:02:32,620 --> 00:02:37,080
+Han råder alle som skal reise, til å følge med på meldinger fra flyselskapet sitt.
+
+25
+00:02:38,200 --> 00:02:42,620
+Flyselskapene kommer til å sende SMS og e-post til passasjerer som blir berørt.
+
+26
+00:02:43,800 --> 00:02:47,620
+Norwegian sier at de skal gjøre det de kan for å hjelpe kundene sine.
+
+27
+00:02:48,560 --> 00:02:51,360
+Sommerværet på Vestlandet har vært uvanlig vått i år.
+
+28
+00:02:52,100 --> 00:02:57,380
+Det har regnet så mye at mange bønder er flere uker på etterskudd med arbeidet sitt.
+
+29
+00:02:58,680 --> 00:03:05,760
+Førsteslåtten, altså den første gangen bøndene slår graset om sommeren, ble forsinket med nesten en måned mange steder.
+
+30
+00:03:06,640 --> 00:03:08,780
+Nå har sola endelig tittet fram igjen.
+
+31
+00:03:09,340 --> 00:03:13,740
+Dermed kan bøndene komme i gang med andreslåtten, som er den andre høstingen av graset.
+
+32
+00:03:14,880 --> 00:03:18,840
+For mange bønder er dette en stor lettelse etter en vanskelig sommer.
+
+33
+00:03:19,680 --> 00:03:22,880
+En av dem som er lettet, er Erik Hafstad fra Førde.
+
+34
+00:03:23,500 --> 00:03:25,560
+Han er bare 30 år gammel og driver gård.
+
+35
+00:03:26,480 --> 00:03:27,080
+– Det var på tide!
+
+36
+00:03:27,620 --> 00:03:29,340
+Endelig litt godvær, sier han.
+
+37
+00:03:29,960 --> 00:03:34,700
+Andreslåtten skulle egentlig vært ferdig for lenge siden, og en tredje slått burde vært i sikte.
+
+38
+00:03:36,000 --> 00:03:43,720
+Men det våte været har gjort arbeidet vanskelig. Når det regner hele tiden, blir jorda for bløt, og graset blir vanskelig å høste.
+
+39
+00:03:44,620 --> 00:03:48,660
+Bonden må vente på tørre dager før han kan kjøre traktoren ut på jordet.
+
+40
+00:03:49,540 --> 00:03:56,020
+Vått gras er dessuten vanskelig å tørke, og hvis graset blir liggende for lenge, mister det næring.
+
+41
+00:03:56,940 --> 00:04:01,160
+Årets sommer er en av de våteste på ti år på Vestlandet.
+
+42
+00:04:02,000 --> 00:04:06,400
+Bondelagsleder Jan Erik Fløtre sier at bøndene nå har fått godt mot igjen.
+
+43
+00:04:07,180 --> 00:04:12,500
+– Nå håper vi at det skal ordne seg, og at folk får berget slåtten noenlunde i hus, sier han.
+
+44
+00:04:13,340 --> 00:04:15,900
+For bare en uke siden så det mye mørkere ut.
+
+45
+00:04:16,820 --> 00:04:19,640
+Da bøttet regnet ned, og mange bønder var fortvilte.
+
+46
+00:04:20,460 --> 00:04:27,360
+Nå går traktorene og forhøsterne for fullt mange steder, selv om noen bønder må vente på at jorda skal tørke opp først.
+
+47
+00:04:28,240 --> 00:04:34,960
+Kjetil Tunold driver et maskinfirma i Stryn, og han hjelper lokale bønder med å slå graset og lage rundballer.
+
+48
+00:04:35,520 --> 00:04:40,220
+Han sier årets sommer har vært en av de verste han har opplevd på 30 år.
+
+49
+00:04:41,100 --> 00:04:45,800
+– Avlingene har vært ok, men det har vært et forferdelig arbeid å få det i hus, sier han.
+
+50
+00:04:46,700 --> 00:04:51,860
+Han tror likevel at de ender opp med omtrent like mange rundballer som vanlig, mellom 7000 og 8000.
+
+51
+00:04:52,960 --> 00:04:57,880
+Men kvaliteten på graset blir mye dårligere enn normalt, og det er et problem for mange.
+
+52
+00:04:58,760 --> 00:05:02,700
+Det er viktig å forstå at dårlig kvalitet på graset får konsekvenser.
+
+53
+00:05:03,400 --> 00:05:08,540
+Kyr og andre dyr trenger godt fôr for å holde seg friske og produsere melk og kjøtt.
+
+54
+00:05:09,240 --> 00:05:16,520
+Bønder kan søke om erstatning hvis avlingen svikter, men erstatningen gjelder bare mengden gras, ikke kvaliteten.
+
+55
+00:05:17,200 --> 00:05:21,680
+Derfor håper bøndene nå på en fin høst med sol og oppholdsvær.
+
+56
+00:05:22,580 --> 00:05:29,560
+Godt vær utover høsten vil rette opp mye av skaden fra den våte sommeren, og det er også godt for humøret til folk.
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  console.log('VTT cues loaded:', cues.length);
+  buildCueElements();
+  // Show first cue as indicator
+  if (cues.length > 0) {
+    const info = document.createElement('div');
+    info.style.cssText = 'font-size:0.75rem;color:#aaa;margin-bottom:8px;padding:0 14px;';
+    info.textContent = cues.length + ' avsnitt lastet';
+    textDisplay.insertBefore(info, textDisplay.firstChild);
+  }
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      // Scroll into view (commented: causes issues in WeChat browser)
+      // el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>
