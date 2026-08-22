@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+    .player-card { position: relative; top: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="metadata"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"><p style="color:#888;font-size:0.85rem;">Laster tekst ...</p></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-08-22.mp3';
+const TITLE = 'Dagens nyheter – 22. august 2026';
+const DATE_STR = '2026-08-22';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:04,120 --> 00:00:07,580
+Trolltunga er en av de mest berømte fjellformasjonene i Norge.
+
+2
+00:00:08,300 --> 00:00:18,720
+Navnet betyr «trollets tunge», fordi fjellet ser ut som en stor tunge som stikker ut. Den ligger i Hardanger, i Ullensvang kommune i Vestland fylke.
+
+3
+00:00:20,220 --> 00:00:27,660
+Fjellformasjonen stikker ut fra fjellsiden som en stor tunge, omtrent 700 meter over innsjøen Ringedalsvatnet.
+
+4
+00:00:28,820 --> 00:00:35,180
+Hver sommer går tusenvis av turister opp dit for å ta bilder på kanten. Turen er lang og krevende.
+
+5
+00:00:35,920 --> 00:00:40,400
+Man må gå rundt ti kilometer, og man går cirka 600 meter opp i høyden.
+
+6
+00:00:41,200 --> 00:00:45,400
+Derfor må man være i god form og ha gode sko når man går til Trolltunga.
+
+7
+00:00:46,160 --> 00:00:49,440
+På fredag giftet ti par seg på toppen av Trolltunga.
+
+8
+00:00:50,100 --> 00:00:52,600
+Dette er blitt en spesiell tradisjon i Norge.
+
+9
+00:00:53,340 --> 00:00:58,260
+De første parene giftet seg der i 2021, da fire par sa ja til hverandre.
+
+10
+00:00:58,700 --> 00:01:00,620
+Siden den gang har mange fulgt etter.
+
+11
+00:01:01,320 --> 00:01:06,600
+I 2023 giftet 13 par seg på stedet, og i 2024 var tallet hele 20.
+
+12
+00:01:07,180 --> 00:01:08,780
+I fjor var det 17 par.
+
+13
+00:01:09,600 --> 00:01:12,680
+Mange synes at bildene fra bryllupene er vakre og romantiske.
+
+14
+00:01:13,220 --> 00:01:19,760
+Fjellet, utsikten og naturen gjør Trolltunga til et helt spesielt sted å si ja til den man elsker.
+
+15
+00:01:20,660 --> 00:01:33,420
+I år var det en ny og viktig regel. Parene kunne ikke bruke helikopter for å komme opp på fjellet. Tidligere fløy helikoptre opp tunge sekker, musikere og de som skulle vie parene.
+
+16
+00:01:34,080 --> 00:01:36,300
+Det gjorde turen mye lettere for brudeparene.
+
+17
+00:01:36,820 --> 00:01:43,000
+Nå måtte brudeparene selv frakte brudekjoler, dresser, sko og pynt i sekker hele veien opp.
+
+18
+00:01:43,740 --> 00:01:47,460
+Det betyr at de måtte bære alt det fine tøyet sitt i ti kilometer.
+
+19
+00:01:48,200 --> 00:01:53,620
+Mange sa likevel at det gikk overraskende bra, selv om sekkene var store og tunge.
+
+20
+00:01:54,700 --> 00:01:56,620
+Statsforvalteren i Vestland stoppet helikopterflygingene.
+
+21
+00:01:58,000 --> 00:02:01,960
+De mente at det var blitt for mange flyginger til det populære turiststedet.
+
+22
+00:02:02,840 --> 00:02:09,540
+Tidligere hadde også artisten Kygo brukt helikopter da han spilte inn en musikkvideo på Trolltunga.
+
+23
+00:02:10,260 --> 00:02:12,420
+Det kom mye kritikk mot de mange flygingene.
+
+24
+00:02:13,100 --> 00:02:27,340
+Ordføreren i Ullensvang, Roald Aga Haug, er likevel kritisk til helikopternekt. Han mener at bildene fra bryllupene er den beste reklamen for Norge man kan tenke seg, og at det var unødvendig å stoppe helikopteret.
+
+25
+00:02:28,740 --> 00:02:32,560
+Maylinn Mæland fra Bømlo giftet seg med Sverre André Brimi Skjelbreid.
+
+26
+00:02:33,340 --> 00:02:37,880
+De hadde med seg to ganske store sekker med brudekjole, dress, sko og pynt.
+
+27
+00:02:38,800 --> 00:02:41,380
+«Det gikk egentlig ganske fint,» sa hun etter turen.
+
+28
+00:02:42,420 --> 00:02:44,960
+I år kommer sju av de ti parene fra Norge.
+
+29
+00:02:45,720 --> 00:02:49,840
+De tre andre parene kommer fra Venezuela, Kina og Australia.
+
+30
+00:02:50,700 --> 00:02:54,760
+Også Inger Eitrheim Johansen, som skulle vie parene, måtte gå til fots.
+
+31
+00:02:55,580 --> 00:02:59,340
+Hun hadde med seg viktige papirer og et klesskift i sekken.
+
+32
+00:03:00,160 --> 00:03:03,500
+På toppen sto det et telt der parene kunne skifte klær.
+
+33
+00:03:04,320 --> 00:03:11,160
+Parene gikk hver for seg i sitt eget tempo, og mange andre turgåere på fjellet heiet og klappet da de kom fram.
+
+34
+00:03:12,420 --> 00:03:16,340
+Brann er fotballklubben fra Bergen, og den har både et herrelag og et kvinnelag.
+
+35
+00:03:17,200 --> 00:03:21,120
+Kvinnelaget spiller i Toppserien, som er den øverste ligaen for kvinner i Norge.
+
+36
+00:03:22,060 --> 00:03:24,860
+På fredag kveld spilte Brann hjemme mot Røa fra Oslo.
+
+37
+00:03:25,560 --> 00:03:28,960
+Brann er serieleder og har vunnet mange kamper denne sesongen.
+
+38
+00:03:29,680 --> 00:03:33,700
+Klubben er regjerende mester og er favoritt til å vinne igjen i år.
+
+39
+00:03:34,480 --> 00:03:39,760
+Røa ligger derimot i den nederste delen av tabellen og kjemper for å unngå nedrykk.
+
+40
+00:03:40,700 --> 00:03:43,500
+Derfor trodde mange at Brann skulle vinne kampen ganske lett.
+
+41
+00:03:44,220 --> 00:03:46,700
+Men fotball er ikke alltid så lett å forutsi.
+
+42
+00:03:47,220 --> 00:03:50,060
+Kampen ble likevel spennende, særlig i starten.
+
+43
+00:03:50,900 --> 00:03:54,180
+Røa tok en overraskende ledelse etter bare fire minutter.
+
+44
+00:03:54,880 --> 00:04:00,320
+Mina Folland snappet opp ballen inne i feltet og sendte den i mål etter en fin vending.
+
+45
+00:04:00,780 --> 00:04:03,520
+Brann så litt rystet ut etter den kalde dusjen.
+
+46
+00:04:04,320 --> 00:04:15,700
+Rett før pause kom likevel utligningen. Brann fikk et hjørnespark, og kapteinen Karoline Haugland prikket ballen i mål fra kloss hold. Da gikk lagene til pause med stillingen 1–1.
+
+47
+00:04:16,800 --> 00:04:19,780
+Etter pause tok Brann full kontroll over kampen.
+
+48
+00:04:20,560 --> 00:04:25,940
+Fem minutter ut i andre omgang scoret Brann igjen, også denne gangen etter en corner.
+
+49
+00:04:26,620 --> 00:04:31,440
+Amalie Eikeland stusset ballen videre til Lauren Davidson bak i feltet.
+
+50
+00:04:31,940 --> 00:04:38,700
+Davidson er fra Skottland, og hun satte ballen sikkert i nettet. Dette var hennes femte seriemål for sesongen.
+
+51
+00:04:39,460 --> 00:04:43,180
+Nå ledet Brann 2–1, og Røa fikk det tungt utover i kampen.
+
+52
+00:04:44,020 --> 00:04:48,120
+Deretter kom innbytteren Brenna Lovera inn i kampen og stjal showet.
+
+53
+00:04:49,080 --> 00:04:51,780
+Hun økte til 3–1 etter 65 minutter.
+
+54
+00:04:52,540 --> 00:04:56,680
+Bare åtte minutter senere scoret hun igjen, denne gangen med hodet.
+
+55
+00:04:57,820 --> 00:05:05,280
+Like etter fullførte hun sitt hat-trick da hun kjempet ballen over målstreken. Det betyr at hun scoret tre mål i samme kamp.
+
+56
+00:05:06,440 --> 00:05:08,360
+Sluttresultatet ble hele 5–1 til Brann.
+
+57
+00:05:09,240 --> 00:05:11,160
+Lovera ble kampens store helt.
+
+58
+00:05:12,120 --> 00:05:14,960
+Seieren betyr mye for Brann i kampen om å vinne serien.
+
+59
+00:05:15,580 --> 00:05:19,360
+Brann leder nå Toppserien med 38 poeng etter 14 kamper.
+
+60
+00:05:20,260 --> 00:05:22,700
+De er åtte poeng foran Rosenborg på andre plass.
+
+61
+00:05:23,740 --> 00:05:25,740
+Røa ligger på tiende plass med bare ti poeng.
+
+62
+00:05:26,400 --> 00:05:29,320
+Nå skal Brann spille flere kamper utover høsten.
+
+63
+00:05:30,000 --> 00:05:33,460
+Målet er å holde ledelsen og til slutt bli seriemester.
+
+64
+00:05:34,240 --> 00:05:37,680
+For Røa blir det en tøff kamp for å beholde plassen i Toppserien.
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  console.log('VTT cues loaded:', cues.length);
+  buildCueElements();
+  // Show first cue as indicator
+  if (cues.length > 0) {
+    const info = document.createElement('div');
+    info.style.cssText = 'font-size:0.75rem;color:#aaa;margin-bottom:8px;padding:0 14px;';
+    info.textContent = cues.length + ' avsnitt lastet';
+    textDisplay.insertBefore(info, textDisplay.firstChild);
+  }
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      // Scroll into view (commented: causes issues in WeChat browser)
+      // el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>
