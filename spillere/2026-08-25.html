@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+    .player-card { position: relative; top: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="metadata"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"><p style="color:#888;font-size:0.85rem;">Laster tekst ...</p></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-08-25.mp3';
+const TITLE = 'Dagens nyheter – 25. august 2026';
+const DATE_STR = '2026-08-25';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:00,100 --> 00:00:03,562
+Streiken blant flygeledere i Norge er over.
+
+2
+00:00:03,512 --> 00:00:11,387
+Norsk Flygelederforening, som ofte forkortes NFF, og arbeidsgiverorganisasjonen Spekter kom til enighet i en mekling.
+
+3
+00:00:11,387 --> 00:00:15,262
+Det betyr at flygelederne nå kan gå tilbake til jobben sin.
+
+4
+00:00:15,262 --> 00:00:19,512
+Streiken startet fredag 21. august og varte i flere dager.
+
+5
+00:00:19,512 --> 00:00:24,925
+I denne perioden ble mange fly forsinket, og mange passasjerer fikk store problemer.
+
+6
+00:00:24,925 --> 00:00:28,512
+Streiken rammet flytrafikken flere steder i landet.
+
+7
+00:00:28,512 --> 00:00:32,362
+Særlig Oslo, Bergen og Stavanger ble hardt rammet.
+
+8
+00:00:32,362 --> 00:00:39,112
+På Bergen lufthavn Flesland måtte flere hundre passasjerer overnatte på flyplassen, fordi flyene deres ble innstilt.
+
+9
+00:00:39,112 --> 00:00:42,187
+Noen måtte sove på gulvet eller i stoler.
+
+10
+00:00:42,187 --> 00:00:46,375
+Hotellene rundt flyplassen ble fulle, og mange fant ikke et rom.
+
+11
+00:00:46,375 --> 00:00:50,162
+For flere hundre mennesker ble det en vanskelig og slitsom natt.
+
+12
+00:00:50,162 --> 00:00:54,937
+I den verste perioden var luftrommet over Bergen og Stavanger stengt en lørdag kveld.
+
+13
+00:00:54,937 --> 00:00:58,762
+Det betyr at ingen fly kunne lette eller lande i området.
+
+14
+00:00:58,762 --> 00:01:01,437
+Også søndag ble Gardermoen rammet.
+
+15
+00:01:01,437 --> 00:01:06,475
+Tusenvis av passasjerer i hele landet ble berørt av forsinkelser og innstillinger.
+
+16
+00:01:06,475 --> 00:01:11,750
+Mange måtte finne nye måter å reise på, og noen ble værende på flyplassen i lang tid.
+
+17
+00:01:11,750 --> 00:01:16,762
+For å forstå hvorfor streiken var så alvorlig, må vi vite hva en flygeleder gjør.
+
+18
+00:01:16,762 --> 00:01:20,925
+Flygeledere er personer som jobber i tårn og kontrollsentraler.
+
+19
+00:01:20,925 --> 00:01:24,862
+De styrer flyene i luften og sørger for at trafikken er trygg.
+
+20
+00:01:24,862 --> 00:01:29,887
+De bestemmer når et fly skal lette og lande, og de holder avstand mellom flyene.
+
+21
+00:01:29,887 --> 00:01:33,187
+Uten dem kan ikke flyene gå på en sikker måte.
+
+22
+00:01:33,187 --> 00:01:39,587
+Derfor får en streik blant flygeledere store konsekvenser, mye større enn en streik i mange andre yrker.
+
+23
+00:01:39,587 --> 00:01:42,500
+Hvorfor gikk flygelederne ut i streik?
+
+24
+00:01:42,500 --> 00:01:45,562
+NFF trakk fram tre viktige årsaker.
+
+25
+00:01:45,562 --> 00:01:48,812
+For det første handlet det om pauser i arbeidsdagen.
+
+26
+00:01:48,812 --> 00:01:54,250
+For det andre handlet det om planlegging av livsfaser, altså hvordan eldre flygeledere kan jobbe.
+
+27
+00:01:54,250 --> 00:01:58,475
+For det tredje handlet det om rammeverket for en avtale for instruktører.
+
+28
+00:01:58,475 --> 00:02:03,537
+Dette er viktige spørsmål om arbeidsforhold, og partene ble ikke enige først.
+
+29
+00:02:03,537 --> 00:02:06,662
+Partene møttes til mekling hos Riksmekleren.
+
+30
+00:02:06,662 --> 00:02:12,562
+Søndag tok arbeidsgiveren initiativ til et nytt forsøk, og mandag kom de fram til en løsning.
+
+31
+00:02:12,562 --> 00:02:16,662
+Flygelederne får et lønnsoppgjør som følger normen fra frontfaget.
+
+32
+00:02:16,662 --> 00:02:21,362
+Frontfaget betyr industrien, som setter normen for lønnsvekst i Norge.
+
+33
+00:02:21,362 --> 00:02:28,225
+De får også en prosess om seniorpolitikk og en tariffregulering for avspasering for arbeidstakere over 55 år.
+
+34
+00:02:28,225 --> 00:02:33,200
+Spørsmålet om pauser ble ikke løst denne gangen, men partene er likevel fornøyde.
+
+35
+00:02:33,200 --> 00:02:36,612
+Nå skal flytrafikken tilbake til det normale.
+
+36
+00:02:36,612 --> 00:02:41,812
+Konsernsjef Abraham Foss i Avinor sier at de setter inn alt for å få flyene i gang igjen.
+
+37
+00:02:41,812 --> 00:02:45,987
+Men han advarer om at det kan komme noen forsinkelser en tid framover.
+
+38
+00:02:45,987 --> 00:02:50,025
+Flygelederne gjør en viktig og krevende jobb, sier Foss.
+
+39
+00:02:50,025 --> 00:02:54,325
+Det krever høy kompetanse, presisjon og ansvarsfølelse.
+
+40
+00:02:54,325 --> 00:02:58,700
+Bybanen er et lite tog, eller en trikk, som går gjennom Bergen.
+
+41
+00:02:58,700 --> 00:03:01,887
+I dag går Bybanen fra sentrum og sørover.
+
+42
+00:03:01,887 --> 00:03:05,812
+Nå skal den bygges videre nordover fra sentrum til Åsane.
+
+43
+00:03:05,812 --> 00:03:08,662
+Planen er å bygge en tunnel under byen.
+
+44
+00:03:08,662 --> 00:03:14,625
+Nå viser en ny rapport at denne tunnelen kan gi «svært stor negativ konsekvens» for byen.
+
+45
+00:03:14,625 --> 00:03:18,587
+Rapporten skaper derfor ny debatt om hvordan Bybanen skal bygges.
+
+46
+00:03:18,587 --> 00:03:21,362
+Det største problemet er grunnvannet.
+
+47
+00:03:21,362 --> 00:03:24,812
+Når man bygger en tunnel, kan grunnvannet endre seg.
+
+48
+00:03:24,812 --> 00:03:28,762
+Rapporten sier at dette utgjør en alvorlig risiko for Bryggen.
+
+49
+00:03:28,762 --> 00:03:34,762
+Bryggen er de gamle trehusene ved havnen i Bergen, og stedet står på UNESCOs verdensarvliste.
+
+50
+00:03:34,762 --> 00:03:39,300
+Hvis grunnvannet synker, kan trehusene bevege seg og bli skadet.
+
+51
+00:03:39,300 --> 00:03:42,012
+Derfor er fagfolk bekymret.
+
+52
+00:03:42,012 --> 00:03:45,437
+Bryggen er en av Norges viktigste kulturminner.
+
+53
+00:03:45,437 --> 00:03:51,662
+I flere hundre år var Bryggen et sentrum for handel i Nord-Europa, og tyske kjøpmenn bodde og jobbet der.
+
+54
+00:03:51,662 --> 00:03:58,675
+Bryggen ble satt på UNESCOs verdensarvliste i 1979. Trehusene er over tre hundre år gamle og står på påler i jorden.
+
+55
+00:03:58,675 --> 00:04:02,437
+Derfor er de ekstra følsomme for endringer i grunnvannet.
+
+56
+00:04:02,437 --> 00:04:06,825
+Å miste Bryggen ville være et stort tap for både Bergen og hele landet.
+
+57
+00:04:06,825 --> 00:04:12,162
+Rapporten handler også om Bergen Katedralskole, en gammel og kjent skole i sentrum.
+
+58
+00:04:12,162 --> 00:04:16,475
+Fire av fem bygg ved skolen må rives hvis tunnelen bygges som planlagt.
+
+59
+00:04:16,475 --> 00:04:19,100
+Skolen er en av de eldste i
+
+60
+00:04:19,204 --> 00:04:23,654
+Norge, med røtter helt tilbake til middelalderen og lange tradisjoner.
+
+61
+00:04:23,604 --> 00:04:28,866
+Lærere og elever er bekymret for hva som vil skje med skolebygningene og undervisningen.
+
+62
+00:04:28,866 --> 00:04:32,254
+Det er ikke bare skolen og Bryggen som kan bli rammet.
+
+63
+00:04:32,254 --> 00:04:36,641
+Tunnelen truer også flere fredete bygg og middelalderruiner i sentrum.
+
+64
+00:04:36,641 --> 00:04:40,241
+Bergen er en gammel by med mye historie under bakken.
+
+65
+00:04:40,241 --> 00:04:44,941
+Når man graver en tunnel, kan man ødelegge verdifulle spor fra fortiden.
+
+66
+00:04:44,941 --> 00:04:50,866
+En fredet bygning er beskyttet ved lov, og derfor er det alvorlig hvis slike bygninger blir skadet.
+
+67
+00:04:50,866 --> 00:04:54,391
+Debatten om Bybanen til Åsane har vart i mange år.
+
+68
+00:04:54,391 --> 00:04:58,941
+Noen politikere vil bygge banen langs Bryggen, mens andre vil ha tunnel.
+
+69
+00:04:58,941 --> 00:05:04,441
+Begge alternativene har sine problemer, og mange bergensere har sterke meninger om saken.
+
+70
+00:05:04,441 --> 00:05:08,616
+Nå viser den nye rapporten at også tunnelen har store utfordringer.
+
+71
+00:05:08,616 --> 00:05:13,529
+En reguleringsplan er et dokument som bestemmer hva som kan bygges hvor i en kommune.
+
+72
+00:05:13,529 --> 00:05:18,841
+Før man kan begynne å bygge tunnelen, må politikere og fagfolk bli enige om planen.
+
+73
+00:05:18,841 --> 00:05:22,816
+Et utkast til reguleringsplan er ventet senere i høst.
+
+74
+00:05:22,816 --> 00:05:26,541
+Da får politikerne nye fakta som de må ta stilling til.
+
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  console.log('VTT cues loaded:', cues.length);
+  buildCueElements();
+  // Show first cue as indicator
+  if (cues.length > 0) {
+    const info = document.createElement('div');
+    info.style.cssText = 'font-size:0.75rem;color:#aaa;margin-bottom:8px;padding:0 14px;';
+    info.textContent = cues.length + ' avsnitt lastet';
+    textDisplay.insertBefore(info, textDisplay.firstChild);
+  }
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      // Scroll into view (commented: causes issues in WeChat browser)
+      // el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>
