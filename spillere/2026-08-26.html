@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+    .player-card { position: relative; top: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="metadata"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"><p style="color:#888;font-size:0.85rem;">Laster tekst ...</p></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-08-26.mp3';
+const TITLE = 'Dagens nyheter – 26. august 2026';
+const DATE_STR = '2026-08-26';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:00,100 --> 00:00:05,550
+I fjellområdet Breheimen i Luster kommune opplever sauebøndene en veldig vanskelig sommer.
+
+2
+00:00:05,500 --> 00:00:08,625
+Flere lam er funnet døde eller hardt skadd.
+
+3
+00:00:08,625 --> 00:00:10,950
+Det er jerven som har drept dem.
+
+4
+00:00:10,950 --> 00:00:14,337
+Jerven er et rovdyr som lever i fjellet i Norge.
+
+5
+00:00:14,337 --> 00:00:19,937
+Den er det største dyret i mårfamilien, og den kan ta mange sauer og lam på svært kort tid.
+
+6
+00:00:19,937 --> 00:00:24,650
+For bøndene er dette et stort problem, fordi sauene er levebrødet deres.
+
+7
+00:00:24,650 --> 00:00:29,687
+Hver vår slipper de sauene ut på beite i fjellet, og hver høst henter de dem ned igjen.
+
+8
+00:00:29,687 --> 00:00:33,787
+Når jerven angriper, mister bøndene både dyr og penger.
+
+9
+00:00:33,787 --> 00:00:39,612
+Sommeren er den viktigste tiden for sauebøndene, fordi det er da sauene vokser og lammene blir store.
+
+10
+00:00:39,612 --> 00:00:43,037
+Et tap nå betyr mindre inntekt for hele året.
+
+11
+00:00:43,037 --> 00:00:45,337
+Bøndene er fortvilet.
+
+12
+00:00:45,337 --> 00:00:49,737
+Noen av dem vurderer nå å gi opp hele driften, skriver Sogn Avis.
+
+13
+00:00:49,737 --> 00:00:52,937
+Det betyr at de kanskje slutter helt å ha sauer.
+
+14
+00:00:52,937 --> 00:00:56,962
+Det er en trist situasjon for folk som har jobbet med dyr i mange år.
+
+15
+00:00:56,962 --> 00:01:00,850
+Å drive med sau er ikke bare en jobb, det er også en livsstil.
+
+16
+00:01:00,850 --> 00:01:04,962
+Mange av disse bøndene har hatt gården i familien i flere generasjoner.
+
+17
+00:01:04,962 --> 00:01:09,575
+Når de nå tenker på å slutte, er det fordi de ikke ser noen løsning på problemet.
+
+18
+00:01:09,575 --> 00:01:12,112
+De føler at de står alene.
+
+19
+00:01:12,112 --> 00:01:17,362
+Statens naturoppsyn, som vi kaller SNO, bekrefter at skadene er store.
+
+20
+00:01:17,362 --> 00:01:22,275
+De har undersøkt 50 dyr, og har dokumentert at jerven har drept ni av dem.
+
+21
+00:01:22,275 --> 00:01:25,037
+Men bøndene er ikke fornøyd med SNO.
+
+22
+00:01:25,037 --> 00:01:29,362
+De mener SNO kommer for sent, og at det er for få folk som jobber med dette.
+
+23
+00:01:29,362 --> 00:01:33,937
+Ofte blir de døde dyrene spist av andre dyr før SNO rekker å undersøke dem.
+
+24
+00:01:33,937 --> 00:01:37,550
+Da er det vanskelig å bevise at det var jerven som drepte dem.
+
+25
+00:01:37,550 --> 00:01:41,250
+Bøndene får derfor ikke alltid erstatning for tapene sine.
+
+26
+00:01:41,250 --> 00:01:44,537
+Dette gjør situasjonen enda vanskeligere for dem.
+
+27
+00:01:44,537 --> 00:01:47,612
+SNO sier at det er vanskelig å fjerne jerven.
+
+28
+00:01:47,612 --> 00:01:50,700
+For å spore jerven trenger de snø på bakken.
+
+29
+00:01:50,700 --> 00:01:53,737
+Uten snø er det nesten umulig å finne den.
+
+30
+00:01:53,737 --> 00:01:58,775
+Jerven er også et fredet dyr i Norge, og den står på den norske rødlista.
+
+31
+00:01:58,775 --> 00:02:03,437
+Det betyr at den er truet, og at det er strenge regler for når man kan ta den ut.
+
+32
+00:02:03,437 --> 00:02:06,425
+Derfor kan det ta lang tid før noe skjer.
+
+33
+00:02:06,425 --> 00:02:13,287
+Det er en vanskelig konflikt mellom bøndene, som vil beskytte sauene sine, og myndighetene, som vil beskytte jerven.
+
+34
+00:02:13,287 --> 00:02:17,762
+Begge parter har gode grunner, og derfor er det ingen enkel løsning.
+
+35
+00:02:17,762 --> 00:02:22,812
+Regjeringen sier at tapstallene så langt i år er lave, og at dette er gode nyheter.
+
+36
+00:02:22,812 --> 00:02:26,875
+Men bøndene svarer at det er i ukene framover at jerven slår til.
+
+37
+00:02:26,875 --> 00:02:29,637
+De mener det er altfor tidlig å juble.
+
+38
+00:02:29,637 --> 00:02:33,862
+Denne saken viser hvor vanskelig det kan være å leve av sauedrift i Norge.
+
+39
+00:02:33,862 --> 00:02:38,012
+Den viser også at natur og landbruk noen ganger står mot hverandre.
+
+40
+00:02:38,012 --> 00:02:40,775
+Hvordan skal man løse en slik konflikt?
+
+41
+00:02:40,775 --> 00:02:44,237
+Det er et spørsmål som mange i Vestland nå diskuterer.
+
+42
+00:02:44,237 --> 00:02:50,675
+Haukeland universitetssykehus er det største sykehuset i Bergen, og et av de viktigste i hele Vestland.
+
+43
+00:02:50,675 --> 00:02:55,062
+Mange pasienter fra hele regionen får behandling her hver eneste dag.
+
+44
+00:02:55,062 --> 00:02:57,687
+Nå slår Helse Bergen alarm.
+
+45
+00:02:57,687 --> 00:03:04,587
+En økonomisk brems fra Helse Vest kan føre til at rehabiliteringen av Sentralblokka blir strukket ut i inntil 20 år.
+
+46
+00:03:04,587 --> 00:03:07,112
+Det skriver Bergens Tidende.
+
+47
+00:03:07,112 --> 00:03:14,075
+Sentralblokka er en stor og gammel bygning midt på sykehusområdet, og den trenger sårt en oppussing og modernisering.
+
+48
+00:03:14,075 --> 00:03:16,150
+Hvorfor skjer dette?
+
+49
+00:03:16,150 --> 00:03:20,250
+Helse Bergen ligger 120 millioner kroner bak budsjett.
+
+50
+00:03:20,250 --> 00:03:23,725
+Det betyr at de har brukt mer penger enn de hadde planlagt.
+
+51
+00:03:23,725 --> 00:03:30,337
+Derfor krever Helse Vest, som styrer sykehusene i regionen, at de årlige investeringene blir kuttet.
+
+52
+00:03:30,337 --> 00:03:35,800
+Helse Vest er det regionale helseforetaket som har ansvar for alle sykehusene på Vestlandet.
+
+53
+00:03:35,800 --> 00:03:39,800
+Når de strammer inn på pengene, må hvert enkelt sykehus spare.
+
+54
+00:03:39,800 --> 00:03:43,712
+Når det er mindre penger tilgjengelig, går byggearbeidet mye saktere.
+
+55
+00:03:43,712 --> 00:03:48,700
+I stedet for å bygge ferdig på ti år, kan arbeidet nå ta dobbelt så lang tid.
+
+56
+00:03:48,700 --> 00:03:51,412
+Det er dette Helse Bergen er redd for.
+
+57
+00:03:51,412 --> 00:03:56,100
+Administrerende direktør Marit Lieng advarer sterkt mot utsettelsen.
+
+58
+00:03:56,100 --> 00:04:03,437
+Hun mener at prosjektet, som totalt koster 17,9 milliarder kroner, bør gjennomføres på ti år, ikke tjue.
+
+59
+00:04:03,437 --> 00:04:07,625
+Hun er bekymret for hva dette betyr for pasientene og for de ansatte.
+
+60
+00:04:07,625 --> 00:04:13,037
+Når en bygning er en byggeplass i tjue år, blir hverdagen vanskelig for alle som jobber der.
+
+61
+00:04:13,037 --> 00:04:15,962
+Støy, støv og trange ganger
+
+62
+00:04:16,084 --> 00:04:20,246
+kan gå ut over både arbeidsmiljøet og pasientenes trygghet.
+
+63
+00:04:20,196 --> 00:04:25,609
+Hvis byggetiden blir forlenget, vil sykehuset mangle operasjonssaler og senger i mange år.
+
+64
+00:04:25,609 --> 00:04:29,371
+Det betyr at pasienter kanskje må vente lenger på behandling.
+
+65
+00:04:29,371 --> 00:04:33,034
+Noen må kanskje reise til andre sykehus for å få hjelp.
+
+66
+00:04:33,034 --> 00:04:37,271
+For et sykehus som hjelper hele Vestland, er dette alvorlig.
+
+67
+00:04:37,271 --> 00:04:43,634
+Helse Bergen har allerede hatt utfordringer med lange ventetider, og denne situasjonen kan gjøre ting verre.
+
+68
+00:04:43,634 --> 00:04:47,559
+Nå må politikerne og helseforetakene finne en løsning.
+
+69
+00:04:47,559 --> 00:04:53,471
+Spørsmålet er om de klarer å finne nok penger, slik at sykehuset ikke blir en byggeplass i tjue år.
+
+70
+00:04:53,471 --> 00:05:00,409
+Sentralblokka er en viktig del av sykehuset, og både pasienter og ansatte fortjener en moderne og trygg bygning.
+
+71
+00:05:00,409 --> 00:05:06,584
+Denne saken handler ikke bare om penger, men om helsetilbudet til alle som bor i Bergen og resten av Vestland.
+
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  console.log('VTT cues loaded:', cues.length);
+  buildCueElements();
+  // Show first cue as indicator
+  if (cues.length > 0) {
+    const info = document.createElement('div');
+    info.style.cssText = 'font-size:0.75rem;color:#aaa;margin-bottom:8px;padding:0 14px;';
+    info.textContent = cues.length + ' avsnitt lastet';
+    textDisplay.insertBefore(info, textDisplay.firstChild);
+  }
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      // Scroll into view (commented: causes issues in WeChat browser)
+      // el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>
