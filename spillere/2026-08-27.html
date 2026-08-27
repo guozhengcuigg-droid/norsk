@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+    .player-card { position: relative; top: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="metadata"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"><p style="color:#888;font-size:0.85rem;">Laster tekst ...</p></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-08-27.mp3';
+const TITLE = 'Dagens nyheter – 27. august 2026';
+const DATE_STR = '2026-08-27';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:00,100 --> 00:00:02,975
+Bergen har fått årets varmeste dag.
+
+2
+00:00:02,925 --> 00:00:07,125
+Torsdag har gradestokken vært uvanlig høy for å være slutten av august.
+
+3
+00:00:07,125 --> 00:00:12,925
+Ifølge meteorologene ble det målt 26 grader i byen, og det er ny rekord for 2026.
+
+4
+00:00:12,925 --> 00:00:19,512
+Bergen er kjent som en by med mye regn, og derfor er solrike og varme dager ekstra kjærkomne for innbyggerne.
+
+5
+00:00:19,512 --> 00:00:23,500
+Mange bergensere tok turen ut i solen for å nyte det fine været.
+
+6
+00:00:23,500 --> 00:00:29,575
+Strender, parker og fjorder ble fylt med folk som ville ha en siste smak av sommeren før høsten kommer for fullt.
+
+7
+00:00:29,575 --> 00:00:34,887
+Meteorolog Geir Ottar Fagerlid hadde allerede tidligere i uken varslet at varmen var på vei.
+
+8
+00:00:34,887 --> 00:00:39,862
+Han forklarte at temperaturen skulle stige dag for dag, og at det bare gikk én vei.
+
+9
+00:00:39,862 --> 00:00:46,337
+Tirsdag var det ventet 23 grader, onsdag opp mot 25 grader, og torsdag hele 26 grader.
+
+10
+00:00:46,337 --> 00:00:50,950
+Det går bare én vei, og det er opp,» sa Fagerlid til Bergensavisen.
+
+11
+00:00:50,950 --> 00:00:55,462
+Han mente at Bergen lå an til en ny årsrekord helt på tampen av august.
+
+12
+00:00:55,462 --> 00:01:00,137
+Mange fulgte spent med på værmeldingen for å se om rekorden faktisk ville bli slått.
+
+13
+00:01:00,137 --> 00:01:04,037
+Den gamle rekorden for 2026 var på 25 grader.
+
+14
+00:01:04,037 --> 00:01:08,725
+Den ble registrert allerede 8. juni, altså for over to måneder siden.
+
+15
+00:01:08,725 --> 00:01:12,725
+Derfor er det ekstra spesielt at byen nå har passert dette tallet.
+
+16
+00:01:12,725 --> 00:01:16,612
+Det skjer bare noen få dager før sommeren er offisielt over.
+
+17
+00:01:16,612 --> 00:01:21,087
+Fagerlid kalte rekorden for noe som kommer «i grevens tid».
+
+18
+00:01:21,087 --> 00:01:25,900
+Dette uttrykket betyr at noe skjer akkurat i tide, rett før det er for sent.
+
+19
+00:01:25,900 --> 00:01:31,125
+For bergenserne føles det som en fin avslutning på en sommer som har hatt både regn og sol.
+
+20
+00:01:31,125 --> 00:01:34,387
+Det er uvanlig at det er så varmt så sent i august.
+
+21
+00:01:34,387 --> 00:01:40,962
+Vanligvis blir været i Bergen kjøligere og våtere utover høsten, og byen er kjent for sine mange regnværsdager.
+
+22
+00:01:40,962 --> 00:01:45,712
+Første september er det offisielt høst i Norge, så vinteren nærmer seg sakte.
+
+23
+00:01:45,712 --> 00:01:50,925
+Derfor er det litt overraskende at Bergen kan vise til 26 grader i slutten av august.
+
+24
+00:01:50,925 --> 00:01:54,987
+Meteorologen mener dette er en svært høy temperatur for årstiden.
+
+25
+00:01:54,987 --> 00:02:01,125
+Han påpeker at slike varme dager helst hører til midt på sommeren, ikke når kalenderen snart sier september.
+
+26
+00:02:01,125 --> 00:02:06,125
+Likevel er det nettopp slike overraskelser som gjør været i Bergen spennende å følge med på.
+
+27
+00:02:06,125 --> 00:02:11,137
+For mange bergensere betyr det varme været en siste sjanse til å bade og være ute.
+
+28
+00:02:11,137 --> 00:02:15,937
+Byens mange badeplasser, parker og fjorder lokker folk ut når solen skinner.
+
+29
+00:02:15,937 --> 00:02:21,200
+Skoler og arbeidsplasser merker også godt at folk er glade og lette til sinns når været er fint.
+
+30
+00:02:21,200 --> 00:02:27,212
+Ekspertene minner likevel om at man bør huske solkrem, drikke nok vann og ta pauser i skyggen når det er varmt.
+
+31
+00:02:27,212 --> 00:02:33,000
+Nå gjelder det å nyte de siste varme dagene, for snart kommer høsten med regn, vind og kjøligere luft.
+
+32
+00:02:33,000 --> 00:02:39,100
+Den norske avisen Morgenbladet har fått kritikk fra Pressens Faglige Utvalg, som ofte kalles PFU.
+
+33
+00:02:39,100 --> 00:02:44,212
+PFU er et uavhengig organ som vurderer om norske medier følger god presseskikk.
+
+34
+00:02:44,212 --> 00:02:47,625
+Denne uken ble Morgenbladet felt av utvalget.
+
+35
+00:02:47,625 --> 00:02:53,337
+Årsaken var at avisen hadde beskyldt en bergensk dokumentarfilm for å bruke kunstig intelligens.
+
+36
+00:02:53,337 --> 00:02:59,737
+Kunstig intelligens kalles ofte KI på norsk, og det er teknologi som kan lage bilder, tekst og lyd.
+
+37
+00:02:59,737 --> 00:03:04,387
+Det viste seg at beskyldningen var feil, og derfor fikk avisen kritikk.
+
+38
+00:03:04,387 --> 00:03:08,912
+Saken handler om dokumentarfilmen «Vi som solgte landet».
+
+39
+00:03:08,912 --> 00:03:13,075
+Filmen er laget av en bergensk regissør som heter Kieran Kolle.
+
+40
+00:03:13,075 --> 00:03:20,437
+I en anmeldelse skrev filmkritiker Ulrik Eriksen at åpningsscenen i filmen var «fake» og laget med kunstig intelligens.
+
+41
+00:03:20,437 --> 00:03:25,087
+Åpningsscenen viser norsk fjellandskap, vindkraftverk og gruvedrift.
+
+42
+00:03:25,087 --> 00:03:30,200
+Avisen hevdet altså at bildene ikke var ekte, men produsert av en datamaskin.
+
+43
+00:03:30,200 --> 00:03:36,475
+Dette er en alvorlig påstand mot en filmskaper, fordi det setter spørsmålstegn ved ektheten i arbeidet.
+
+44
+00:03:36,475 --> 00:03:39,525
+Men påstanden viste seg å være helt feil.
+
+45
+00:03:39,525 --> 00:03:44,300
+Bildene var ekte, og de ble filmet på ekte steder i Sokndal i Rogaland.
+
+46
+00:03:44,300 --> 00:03:48,750
+Det var altså ingen kunstig intelligens involvert i produksjonen av scenen.
+
+47
+00:03:48,750 --> 00:03:53,012
+Filmmakerne hadde brukt vanlige kameraer og filmet virkelig natur.
+
+48
+00:03:53,012 --> 00:03:57,675
+Dette ble en stor sak, fordi det handler om tillit mellom presse og publikum.
+
+49
+00:03:57,675 --> 00:04:04,025
+Når en avis skriver at noe er falskt, er det helt nødvendig at opplysningene er korrekte og kontrollerte.
+
+50
+00:04:04,025 --> 00:04:07,862
+Regissør Kieran Kolle reagerte kraftig på anmeldelsen.
+
+51
+00:04:07,862 --> 00:04:09,237
+Han
+
+52
+00:04:09,340 --> 00:04:14,265
+kalte påstanden for en løgn, og mente at den i praksis var ærekrenkelse.
+
+53
+00:04:14,215 --> 00:04:19,377
+Ærekrenkelse betyr å skade noens rykte ved å komme med usanne påstander om personen.
+
+54
+00:04:19,377 --> 00:04:24,190
+Slike saker kan få store konsekvenser for en liten, uavhengig film.
+
+55
+00:04:24,190 --> 00:04:28,615
+Kolle og produksjonsselskapet rettet sterk kritikk mot Morgenbladet.
+
+56
+00:04:28,615 --> 00:04:33,477
+De mente at avisen ikke hadde sjekket fakta godt nok før de publiserte anmeldelsen.
+
+57
+00:04:33,477 --> 00:04:39,515
+For en uavhengig filmskaper kan en slik feil være svært skadelig for omdømmet og for framtidige prosjekter.
+
+58
+00:04:39,515 --> 00:04:42,865
+Morgenbladet erkjente feilen og beklaget.
+
+59
+00:04:42,865 --> 00:04:47,302
+De publiserte senere en rettelse der de korrigerte påstanden om bildene.
+
+60
+00:04:47,302 --> 00:04:52,827
+PFU konkluderte med at Morgenbladet brøt god presseskikk i den såkalte Vær Varsom-plakaten.
+
+61
+00:04:52,827 --> 00:04:56,940
+Dette er et sett med etiske regler som norske medier skal følge.
+
+62
+00:04:56,940 --> 00:05:02,602
+Reglene stiller krav om at journalister må kontrollere opplysningene sine før de publiserer noe.
+
+63
+00:05:02,602 --> 00:05:09,240
+Saken viser hvor viktig det er å være nøyaktig i mediene, spesielt når det gjelder ny teknologi som kunstig intelligens.
+
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  console.log('VTT cues loaded:', cues.length);
+  buildCueElements();
+  // Show first cue as indicator
+  if (cues.length > 0) {
+    const info = document.createElement('div');
+    info.style.cssText = 'font-size:0.75rem;color:#aaa;margin-bottom:8px;padding:0 14px;';
+    info.textContent = cues.length + ' avsnitt lastet';
+    textDisplay.insertBefore(info, textDisplay.firstChild);
+  }
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      // Scroll into view (commented: causes issues in WeChat browser)
+      // el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>
