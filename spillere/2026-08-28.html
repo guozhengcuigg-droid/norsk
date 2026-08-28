@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+    .player-card { position: relative; top: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="metadata"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"><p style="color:#888;font-size:0.85rem;">Laster tekst ...</p></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-08-28.mp3';
+const TITLE = 'Dagens nyheter – 28. august 2026';
+const DATE_STR = '2026-08-28';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:00,100 --> 00:00:03,250
+Sportsklubben Brann fra Bergen har gjort det igjen.
+
+2
+00:00:03,200 --> 00:00:09,925
+Torsdag kveld spilte Brann en svært dramatisk fotballkamp på Brann Stadion mot den greske klubben PAOK fra Thessaloniki.
+
+3
+00:00:09,925 --> 00:00:16,537
+Kampen var en del av kvalifiseringen til UEFA Conference League, en turnering som nå kalles Serieligaen på norsk.
+
+4
+00:00:16,537 --> 00:00:20,225
+Etter nitti spennende minutter vant Brann kampen 3–2.
+
+5
+00:00:20,225 --> 00:00:23,700
+Dermed er laget klare for gruppespillet i Europa.
+
+6
+00:00:23,700 --> 00:00:28,562
+Dette er en stor begivenhet for hele byen, for supporterne og for klubben.
+
+7
+00:00:28,562 --> 00:00:32,012
+Mange hadde gledet seg til denne kvelden i ukevis.
+
+8
+00:00:32,012 --> 00:00:36,237
+Før denne kampen hadde Brann spilt bortekamp mot PAOK i Hellas.
+
+9
+00:00:36,237 --> 00:00:42,400
+Den første kampen endte 1–1, noe som betydde at alt fortsatt var åpent før returkampen i Bergen.
+
+10
+00:00:42,400 --> 00:00:46,675
+Sammenlagt stod det altså 1–1 da lagene møttes på Brann Stadion.
+
+11
+00:00:46,675 --> 00:00:52,375
+Mange supportere hadde møtt opp for å støtte laget sitt, både på tribunen og utenfor stadion.
+
+12
+00:00:52,375 --> 00:00:57,825
+Stemningen var elektrisk, og alle håpet på en europeisk fotballkveld de sent ville glemme.
+
+13
+00:00:57,825 --> 00:01:02,337
+Det var også ekstra spenning fordi så mye stod på spill i én enkelt kamp.
+
+14
+00:01:02,337 --> 00:01:06,275
+For vinneren ventet en plass blant de beste lagene i Europa.
+
+15
+00:01:06,275 --> 00:01:09,237
+Kampen var en skikkelig berg-og-dalbane.
+
+16
+00:01:09,237 --> 00:01:16,612
+Brann tok ledelsen etter at Niklas Castro slo et hjørnespark mot bakre stolpe, der Marius Holm steg opp og headet ballen i mål.
+
+17
+00:01:16,612 --> 00:01:19,225
+Det stod 1–0 til pause.
+
+18
+00:01:19,225 --> 00:01:23,912
+Etter pause scoret Isak Ingason, og Brann ledet 2–0.
+
+19
+00:01:23,912 --> 00:01:26,212
+Men PAOK ga seg ikke.
+
+20
+00:01:26,212 --> 00:01:29,875
+De scoret to ganger og utlignet til 2–2.
+
+21
+00:01:29,875 --> 00:01:35,037
+Det så plutselig mørkt ut for Brann, og nervene var til å ta og føle på blant publikum.
+
+22
+00:01:35,037 --> 00:01:39,312
+Da, i det 86. minuttet, fikk Brann straffespark.
+
+23
+00:01:39,312 --> 00:01:43,075
+Niklas Castro var iskald og satte ballen sikkert i mål.
+
+24
+00:01:43,075 --> 00:01:47,425
+Brann vant til slutt 3–2, og 4–3 sammenlagt.
+
+25
+00:01:47,425 --> 00:01:53,550
+Serieligaen, eller Conference League, er det tredje øverste nivået for klubbfotball i Europa.
+
+26
+00:01:53,550 --> 00:01:57,000
+Bare Mesterligaen og Europaligaen er større.
+
+27
+00:01:57,000 --> 00:02:01,150
+For Brann betyr dette mye, både sportslig og økonomisk.
+
+28
+00:02:01,150 --> 00:02:07,062
+Å spille i Europa gir klubben viktige inntekter, blant annet fra billetter og TV-rettigheter.
+
+29
+00:02:07,062 --> 00:02:13,962
+I fjor kom Brann seg videre fra gruppespillet i Europaligaen, men ble slått ut av italienske Bologna i runden etter.
+
+30
+00:02:13,962 --> 00:02:19,550
+Nå får klubben en ny sjanse til å måle krefter mot sterke europeiske lag og bygge seg videre opp.
+
+31
+00:02:19,550 --> 00:02:22,450
+Etter kampen var det stor fest i Bergen.
+
+32
+00:02:22,450 --> 00:02:28,037
+Spillerne og trenerne ble hyllet av et fullsatt publikum som sang og jublet lenge etter kampslutt.
+
+33
+00:02:28,037 --> 00:02:36,387
+Brann har en lang og stolt historie, og klubben ble stiftet allerede i 1908. Å komme seg til gruppespillet i Europa er en bragd som fansen sent vil glemme.
+
+34
+00:02:36,387 --> 00:02:40,250
+Nå venter nye spennende kamper i Serieligaen utover høsten.
+
+35
+00:02:40,250 --> 00:02:46,725
+For Bergen betyr dette at byen igjen er på Europakartet, noe som skaper stolthet langt utenfor fotballbanen.
+
+36
+00:02:46,725 --> 00:02:53,662
+Supporterne gleder seg allerede til høstens kamper, og også næringslivet i byen merker den positive stemningen rundt klubben.
+
+37
+00:02:53,662 --> 00:02:56,825
+Norge opplever en alvorlig og trist tid.
+
+38
+00:02:56,825 --> 00:03:02,112
+Kong Harald, som er 89 år gammel, er innlagt på Rikshospitalet i Oslo.
+
+39
+00:03:02,112 --> 00:03:05,912
+Kongen har en blodsykdom som kalles hemolytisk anemi.
+
+40
+00:03:05,912 --> 00:03:10,975
+Det betyr at de røde blodcellene brytes ned raskere enn beinmargen klarer å lage nye.
+
+41
+00:03:10,975 --> 00:03:16,200
+Slike celler frakter oksygen rundt i kroppen, så sykdommen gjør kongen svært svak.
+
+42
+00:03:16,200 --> 00:03:21,450
+Han har vært innlagt på sykehuset siden mandag i forrige uke, og han får behandling der.
+
+43
+00:03:21,450 --> 00:03:26,387
+Sykdommen er sjelden, men den kan være alvorlig når den rammer en eldre person.
+
+44
+00:03:26,387 --> 00:03:29,837
+Torsdag morgen kom en alvorlig beskjed fra kongehuset.
+
+45
+00:03:29,837 --> 00:03:36,537
+Helsetilstanden til kongen er svært alvorlig, og tilstanden har siden vært uforandret, opplyser kongehuset.
+
+46
+00:03:36,537 --> 00:03:41,337
+Fredag morgen ankom dronning Sonja Rikshospitalet for å være hos mannen sin.
+
+47
+00:03:41,337 --> 00:03:45,287
+Kronprins Haakon fungerer som regent mens kongen er syk.
+
+48
+00:03:45,287 --> 00:03:50,687
+Det betyr at kronprinsen overtar kongens oppgaver og representerer Norge i denne tiden.
+
+49
+00:03:50,687 --> 00:03:54,200
+Det er en helt normal ordning når en monark blir syk.
+
+50
+00:03:54,200 --> 00:03:58,100
+Over hele landet viser folk sin støtte og kjærlighet til kongen.
+
+51
+00:03:58,100 --> 00:04:03,037
+I Bergen har mange lagt ned blomster og håndskrevne kort ved Den blå steinen i sentrum.
+
+52
+00:04:03,037 --> 00:04:06,375
+Den blå steinen er et kjent møtested i byen.
+
+53
+00:04:06,375 --> 00:04:11,637
+På kortene står det blant annet «Lenge leve kongen» og «Tusen takk».
+
+54
+00:04:11,637 --> 00:04:17,400
+Også ved Gamlehaugen, kongens offisielle bolig i Bergen, har folk lagt ned blomster.
+
+55
+00:04:17,500 --> 00:04:22,737
+Der kan folk samles på Seremoniplassen for å vise respekt og fellesskap i en vanskelig tid.
+
+56
+00:04:22,687 --> 00:04:26,237
+Mange bergensere forteller at kongen betyr mye for dem.
+
+57
+00:04:26,237 --> 00:04:33,237
+En ung kvinne, Oda Nordaas Solheim på 22 år, beskriver kongen som «hele Norges bestefar».
+
+58
+00:04:33,237 --> 00:04:38,737
+Hun sier at kongen har vært en trygg og samlende skikkelse for landet, og at hun kommer til å savne ham.
+
+59
+00:04:38,737 --> 00:04:43,950
+Søstrene Agnesa og Trina Nepola tok med seg barna sine for å se på blomsterhavet.
+
+60
+00:04:43,950 --> 00:04:48,787
+Man får litt frysninger, selv om man vet at slike ting skjer, sier Agnesa.
+
+61
+00:04:48,787 --> 00:04:52,537
+Synet av blomstene gjør alvoret i situasjonen ekte.
+
+62
+00:04:52,537 --> 00:04:57,112
+Flere sier at kongefamilien er i tankene deres hver eneste dag nå.
+
+63
+00:04:57,112 --> 00:05:02,012
+Kong Harald har vært Norges konge siden 1991, da faren kong Olav døde.
+
+64
+00:05:02,012 --> 00:05:13,712
+Han er den første norske kongen som er født i Norge siden 1380. Gjennom mange tiår har han vært en samlende skikkelse for det norske folket, og han er kjent for å bryte normer, for eksempel da han giftet seg med Sonja Haraldsen, en vanlig borger.
+
+65
+00:05:13,712 --> 00:05:17,525
+Nå følger hele landet med på nyhetene fra Rikshospitalet.
+
+66
+00:05:17,525 --> 00:05:21,850
+Alle håper at kongen skal bli bedre, og at kongefamilien får ro.
+
+67
+00:05:21,850 --> 00:05:25,587
+Hele nasjonen venter nå på gode nyheter fra sykehuset.
+
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  console.log('VTT cues loaded:', cues.length);
+  buildCueElements();
+  // Show first cue as indicator
+  if (cues.length > 0) {
+    const info = document.createElement('div');
+    info.style.cssText = 'font-size:0.75rem;color:#aaa;margin-bottom:8px;padding:0 14px;';
+    info.textContent = cues.length + ' avsnitt lastet';
+    textDisplay.insertBefore(info, textDisplay.firstChild);
+  }
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      // Scroll into view (commented: causes issues in WeChat browser)
+      // el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>
