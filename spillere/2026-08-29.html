@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎧 Norsk lytting – synkronisert tekst</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card-bg: #ffffff;
+    --text: #2d2d2d;
+    --text-dim: #888;
+    --highlight: #fff3b0;
+    --highlight-border: #f0c000;
+    --accent: #1a6b8a;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    padding: 24px 0 16px;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .date { font-size: 0.85rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* Player card */
+  .player-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+  }
+
+  .audio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  audio {
+    flex: 1;
+    height: 40px;
+  }
+
+  .speed-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .speed-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .speed-btns button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .speed-btns button:hover { border-color: var(--accent); }
+
+  .progress-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: #eee;
+    border-radius: 2px;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  /* Text display */
+  .text-display {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 28px;
+  }
+
+  .cue-line {
+    padding: 10px 14px;
+    margin: 4px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 1.05rem;
+  }
+  .cue-line:hover {
+    background: #f5f5f5;
+  }
+  .cue-line.active {
+    background: var(--highlight);
+    border-left-color: var(--highlight-border);
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(240,192,0,0.15);
+  }
+  .cue-line.past {
+    color: var(--text-dim);
+  }
+
+  .cue-index {
+    display: inline-block;
+    width: 28px;
+    color: #bbb;
+    font-size: 0.75rem;
+    text-align: right;
+    margin-right: 12px;
+    user-select: none;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    .player-card, .text-display { padding: 14px; }
+    .cue-line { font-size: 0.95rem; padding: 8px 10px; }
+    .player-card { position: relative; top: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="title">Norsk nyheter – lytting</h1>
+  <div class="date" id="date-display"></div>
+</div>
+
+<div class="player-card">
+  <div class="audio-row">
+    <audio id="audio" controls preload="metadata"></audio>
+    <div class="speed-btns">
+      <button data-rate="0.75">0.75×</button>
+      <button data-rate="1" class="active">1×</button>
+      <button data-rate="1.25">1.25×</button>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<div class="text-display" id="text-display"><p style="color:#888;font-size:0.85rem;">Laster tekst ...</p></div>
+
+<script>
+// ============ CONFIG (replaced by generator) ============
+const AUDIO_URL = '2026-08-29.mp3';
+const TITLE = 'Dagens nyheter – 29. august 2026';
+const DATE_STR = '2026-08-29';
+// VTT data embedded directly for single-file sharing:
+const VTT_DATA = `1
+00:00:00,100 --> 00:00:02,412
+Kong Harald V er død.
+
+2
+00:00:02,362 --> 00:00:08,825
+Han sovnet stille inn på Rikshospitalet i Oslo fredag morgen, 28. august, klokken 06.35.
+
+3
+00:00:08,825 --> 00:00:11,375
+Kongen ble 89 år gammel.
+
+4
+00:00:11,375 --> 00:00:16,562
+Han hadde vært syk i lengre tid, og de siste dagene var kongefamilien samlet rundt ham.
+
+5
+00:00:16,562 --> 00:00:20,662
+Dronning Sonja og kronprins Haakon var ved hans side da han gikk bort.
+
+6
+00:00:20,662 --> 00:00:23,550
+Kong Harald ble født i 1937.
+
+7
+00:00:23,550 --> 00:00:28,987
+Han ble konge i 1991, etter at faren hans, kong Olav V, døde.
+
+8
+00:00:28,987 --> 00:00:32,150
+I over 35 år var han Norges konge.
+
+9
+00:00:32,150 --> 00:00:35,700
+Mange nordmenn husker ham som en varm og folkelig konge.
+
+10
+00:00:35,700 --> 00:00:40,600
+Han brukte ofte humor, og han sa at Norge er et land der alle skal føle seg hjemme.
+
+11
+00:00:40,600 --> 00:00:45,512
+Han var en konge som møtte folk med nærhet og varme, ikke bare med høytidelige taler.
+
+12
+00:00:45,512 --> 00:00:48,462
+Kong Harald levde et langt og rikt liv.
+
+13
+00:00:48,462 --> 00:00:57,150
+Han ble født på Skaugum utenfor Oslo i 1937. Som liten gutt måtte han flykte fra Norge under andre verdenskrig, og familien bodde flere år i USA.
+
+14
+00:00:57,150 --> 00:01:01,862
+Etter krigen studerte han i England, og han var også en svært dyktig seiler.
+
+15
+00:01:01,862 --> 00:01:08,100
+Han deltok i seiling under OL tre ganger, og han vant flere medaljer i internasjonale mesterskap.
+
+16
+00:01:08,100 --> 00:01:13,600
+I 1968 giftet han seg med Sonja Haraldsen, som kom fra en helt vanlig familie.
+
+17
+00:01:13,600 --> 00:01:18,950
+Mange syntes dette var modig den gang, men paret ble etter hvert svært godt likt i hele Norge.
+
+18
+00:01:18,950 --> 00:01:22,537
+Regjeringen har nå bestemt en nasjonal sørgeperiode.
+
+19
+00:01:22,537 --> 00:01:25,750
+Den varer fra i dag og helt til etter gravferden.
+
+20
+00:01:25,750 --> 00:01:29,025
+Alle offentlige bygninger flagger på halv stang.
+
+21
+00:01:29,025 --> 00:01:32,462
+Mange mennesker tenner lys og legger ned blomster.
+
+22
+00:01:32,462 --> 00:01:37,187
+I Oslo samles folk utenfor Slottet for å vise respekt og takknemlighet.
+
+23
+00:01:37,187 --> 00:01:44,150
+Flere ministre har skrevet varme minneord om kongen, og statsminister Jonas Gahr Støre sa at hele nasjonen sørger.
+
+24
+00:01:44,150 --> 00:01:46,962
+Bergen var en by kongen var glad i.
+
+25
+00:01:46,962 --> 00:01:50,162
+Han besøkte Bergen mange ganger gjennom årene.
+
+26
+00:01:50,162 --> 00:01:54,987
+I går kveld samlet flere hundre mennesker seg ved Den blå steinen i sentrum av Bergen.
+
+27
+00:01:54,987 --> 00:01:58,875
+Den blå steinen er et kjent møtested på Torgallmenningen.
+
+28
+00:01:58,875 --> 00:02:02,650
+Folk la ned blomster og tente lys for å minnes kongen.
+
+29
+00:02:02,650 --> 00:02:07,400
+På Gamlehaugen, kongens bolig i Bergen, ble Kongesangen spilt.
+
+30
+00:02:07,400 --> 00:02:13,862
+Kongen kalte også Lærdalselvi i Sogn for «sin andre dronning», noe mange i Vestland husker med glede.
+
+31
+00:02:13,862 --> 00:02:18,425
+Mange mennesker i Norge husker også kongens berømte tale fra 2016.
+
+32
+00:02:18,425 --> 00:02:24,200
+Han sa at Norge består av mennesker med ulik bakgrunn, ulik tro og ulike måter å elske på.
+
+33
+00:02:24,200 --> 00:02:27,712
+Norge er deg, Norge er oss,» sa han.
+
+34
+00:02:27,712 --> 00:02:32,400
+Talen ble sett og hørt av millioner, og den gjorde sterkt inntrykk på mange.
+
+35
+00:02:32,400 --> 00:02:36,537
+Den viste at kongen sto opp for at alle mennesker skal ha samme verdi.
+
+36
+00:02:36,537 --> 00:02:40,737
+I dag skulle kongen og dronningen egentlig ha feiret bryllupsdagen sin.
+
+37
+00:02:40,737 --> 00:02:48,462
+De giftet seg i Oslo domkirke for 58 år siden, 29. august 1968. I stedet for en festdag ble det en dag med sorg.
+
+38
+00:02:48,462 --> 00:02:51,850
+Nå blir kronprins Haakon den nye kongen i Norge.
+
+39
+00:02:51,850 --> 00:02:56,512
+Mange tenker på dronning Sonja og resten av kongefamilien i denne tunge tiden.
+
+40
+00:02:56,512 --> 00:02:59,637
+I dag er det en viktig avstemning på Island.
+
+41
+00:02:59,637 --> 00:03:04,600
+Islendingene stemmer om landet skal starte nye forhandlinger om medlemskap i EU.
+
+42
+00:03:04,600 --> 00:03:08,462
+Valglokalene holder åpent til klokken 22 lørdag kveld.
+
+43
+00:03:08,462 --> 00:03:11,850
+De første resultatene er ventet etter midnatt.
+
+44
+00:03:11,850 --> 00:03:15,562
+Dette er en stor dag for det lille landet i Nord-Atlanteren.
+
+45
+00:03:15,562 --> 00:03:19,662
+Island er et lite land med omtrent 400 000 innbyggere.
+
+46
+00:03:19,662 --> 00:03:24,200
+Landet ligger ikke langt fra Norge, og de to landene har mye felles historie.
+
+47
+00:03:24,200 --> 00:03:28,437
+Island er ikke medlem av EU, men landet er med i EØS.
+
+48
+00:03:28,437 --> 00:03:33,137
+EØS betyr at Island samarbeider tett med EU om handel og økonomi.
+
+49
+00:03:33,137 --> 00:03:36,625
+Likevel har Island ikke vært fullt medlem av EU.
+
+50
+00:03:36,625 --> 00:03:42,475
+Island søkte om EU-medlemskap i 2009, etter finanskrisen som rammet landet hardt.
+
+51
+00:03:42,475 --> 00:03:45,337
+Forhandlingene startet i 2010.
+
+52
+00:03:45,337 --> 00:03:49,200
+Men i 2015 bestemte landet seg for å trekke søknaden.
+
+53
+00:03:49,200 --> 00:03:53,837
+Nå, elleve år senere, vil mange politikere prøve på nytt.
+
+54
+00:03:53,837 --> 00:03:57,262
+De mener tiden er moden for en ny debatt om EU.
+
+55
+00:03:57,262 --> 00:04:00,525
+De siste målingene viser at det er veldig jevnt.
+
+56
+00:04:00,525 --> 00:04:04,712
+Et lite flertall ser ut til å være på nei-siden, men det er knepent.
+
+57
+00:04:04,712 --> 00:04:07,850
+Mange islendinger er fortsatt usikre.
+
+58
+00:04:07,850 --> 00:04:13,937
+Fisk er en viktig næring for Island, og mange er redde for at EU vil bestemme for mye over fiskeriet.
+
+59
+00:04:13,937 --> 00:04:17,412
+Andre mener EU gir trygghet og nye muligheter.
+
+60
+00:04:17,412 --> 00:04:22,462
+Begge sider har derfor jobbet hardt de siste ukene for å få velgerne over på sin side.
+
+61
+00:04:22,462 --> 00:04:25,362
+Norge er heller ikke medlem av EU.
+
+62
+00:04:25,362 --> 00:04:30,025
+Norge sa nei til EU i folkeavstemninger i 1972 og i
+
+63
+00:04:30,124 --> 00:04:35,549
+1994. Derfor er det interessant for nordmenn å følge med på hva Island bestemmer i dag.
+
+64
+00:04:35,499 --> 00:04:41,099
+Hvis Island sier ja til forhandlinger, kan det starte en ny debatt om EU også her i Norge.
+
+65
+00:04:41,099 --> 00:04:43,636
+Vi får svaret i løpet av natten.
+
+66
+00:04:43,636 --> 00:04:47,986
+Uansett hva resultatet blir, er dette en viktig dag for Island.
+
+67
+00:04:47,986 --> 00:04:51,961
+Et ja betyr ikke automatisk at Island blir medlem av EU.
+
+68
+00:04:51,961 --> 00:04:58,511
+Da må det først gjennomføres lange forhandlinger om mange forskjellige temaer, som fisk, landbruk og økonomi.
+
+69
+00:04:58,511 --> 00:05:02,474
+Et nei betyr at landet fortsetter med den ordningen det har i dag.
+
+70
+00:05:02,474 --> 00:05:07,886
+Begge sider i debatten er enige om at valget handler om hvordan Island skal se ut i framtiden.
+
+71
+00:05:07,886 --> 00:05:12,549
+Nå venter mange i hele Norden spent på hva det islandske folket bestemmer seg for.
+
+`;
+// ========================================================
+
+document.getElementById('title').textContent = TITLE;
+document.getElementById('date-display').textContent = DATE_STR;
+
+const audio = document.getElementById('audio');
+const textDisplay = document.getElementById('text-display');
+const progressFill = document.getElementById('progress-fill');
+const speedBtns = document.querySelectorAll('.speed-btns button');
+
+let cues = [];
+let currentCueIdx = -1;
+
+// --- Parse VTT (embedded data) ---
+function loadVTT() {
+  cues = parseVTT(VTT_DATA);
+  console.log('VTT cues loaded:', cues.length);
+  buildCueElements();
+  // Show first cue as indicator
+  if (cues.length > 0) {
+    const info = document.createElement('div');
+    info.style.cssText = 'font-size:0.75rem;color:#aaa;margin-bottom:8px;padding:0 14px;';
+    info.textContent = cues.length + ' avsnitt lastet';
+    textDisplay.insertBefore(info, textDisplay.firstChild);
+  }
+}
+
+function parseVTT(raw) {
+  const result = [];
+  const blocks = raw.trim().split(/\n\s*\n/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    // Find the timing line: 00:00:00.000 --> 00:00:00.000
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) continue;
+    const times = timeLine.split('-->').map(t => parseTime(t.trim()));
+    if (times.length !== 2) continue;
+    const text = lines.slice(lines.indexOf(timeLine) + 1).join(' ').trim();
+    if (!text) continue;
+    result.push({ start: times[0], end: times[1], text });
+  }
+  return result;
+}
+
+function parseTime(t) {
+  // HH:MM:SS.mmm or MM:SS.mmm
+  const parts = t.split(':');
+  let h = 0, m = 0, s = 0;
+  if (parts.length === 3) {
+    h = parseInt(parts[0]); m = parseInt(parts[1]); s = parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    m = parseInt(parts[0]); s = parseFloat(parts[1]);
+  }
+  return h * 3600 + m * 60 + s;
+}
+
+function buildCueElements() {
+  textDisplay.innerHTML = '';
+  cues.forEach((cue, i) => {
+    const div = document.createElement('div');
+    div.className = 'cue-line';
+    div.innerHTML = `<span class="cue-index">${i + 1}</span>${cue.text}`;
+    div.addEventListener('click', () => {
+      audio.currentTime = cue.start;
+      audio.play();
+    });
+    div.dataset.index = i;
+    textDisplay.appendChild(div);
+  });
+}
+
+// --- Sync ---
+function updateActiveCue() {
+  const t = audio.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < cues.length; i++) {
+    if (t >= cues[i].start && t < cues[i].end) { newIdx = i; break; }
+  }
+  if (newIdx === currentCueIdx) return;
+  
+  // Remove old active
+  if (currentCueIdx >= 0) {
+    const old = textDisplay.querySelector(`[data-index="${currentCueIdx}"]`);
+    if (old) {
+      old.classList.remove('active');
+      if (currentCueIdx < newIdx || (newIdx === -1 && t > cues[currentCueIdx].end)) {
+        old.classList.add('past');
+      }
+    }
+  }
+  
+  currentCueIdx = newIdx;
+  if (newIdx >= 0) {
+    const el = textDisplay.querySelector(`[data-index="${newIdx}"]`);
+    if (el) {
+      el.classList.remove('past');
+      el.classList.add('active');
+      // Scroll into view smoothly
+      // Scroll into view (commented: causes issues in WeChat browser)
+      // el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+
+function updateProgress() {
+  if (audio.duration) {
+    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  }
+}
+
+audio.addEventListener('timeupdate', () => {
+  updateActiveCue();
+  updateProgress();
+});
+
+audio.addEventListener('play', () => {
+  if (cues.length > 0 && currentCueIdx < 0) updateActiveCue();
+});
+
+// --- Speed control ---
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rate = parseFloat(btn.dataset.rate);
+    audio.playbackRate = rate;
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// --- Init ---
+audio.src = AUDIO_URL;
+try {
+  loadVTT();
+} catch(err) {
+  textDisplay.innerHTML = `<p style="color:#c00;">⚠️ Kunne ikke laste tekst: ${err.message}</p>`;
+}
+</script>
+</body>
+</html>
